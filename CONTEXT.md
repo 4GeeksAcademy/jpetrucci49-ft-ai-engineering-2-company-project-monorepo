@@ -1,5 +1,8 @@
 # Welcome to HealthCore
 
+## Why I chose HealthCore
+I chose HealthCore because it offers a good mix of technical complexity and real world impact. Working across two countries with different regulations like HIPAA and GDPR, plus two separate electronic health record systems, presents some serious integration and data challenges that I want to tackle. I see a lot of opportunity to build meaningful automations like no-show prediction and claims review tools that could actually move the needle on their biggest problems. This project also gives me a chance to learn how to handle sensitive healthcare data properly and build systems that work in a regulated environment. A friend of mine who is a nurse recently asked me if I could help build something useful for hospitals or clinics, so this feels like a great opportunity to practice those kinds of solutions and have something solid to show her later.
+
 ## AI Engineering · 4Geeks Academy — Company Briefing
 
 ---
