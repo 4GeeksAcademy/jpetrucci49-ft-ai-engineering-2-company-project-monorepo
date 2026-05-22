@@ -20,6 +20,14 @@ I want to build an **Intelligent Appointment Management Agent** for the Patient 
 
 It would need access to appointment history, patient demographics, past no-show patterns, and real-time schedule data from both the US and UK EHR systems. The agent would interact with patients through natural conversation and with clinic staff by flagging high-risk appointments in a dashboard or sending daily summaries to the operations team.
 
+## My AI Agent Idea
+
+**Intelligent Appointment Management Agent**
+
+This agent would monitor upcoming appointments and predict which patients are likely to no-show based on historical patterns. It would then automatically send personalized reminders through SMS, email, or the patient app, and offer easy rescheduling options if needed. 
+
+The agent would need access to appointment history, patient data, past no-show records, and real-time schedule information from both the US and UK EHR systems. It would interact with patients via natural conversation in reminders and with clinic staff by sending daily summaries of high-risk appointments and automatically updating the schedule when patients reschedule.
+
 ## AI Engineering · 4Geeks Academy — Company Briefing
 
 ---
