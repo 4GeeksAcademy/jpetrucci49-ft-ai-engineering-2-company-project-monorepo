@@ -14,6 +14,12 @@ I like Patient Experience because the 22 percent no show rate is a big issue tha
 
 From the milestone map, I am most excited to work on Milestone 8: Agents. Specifically, building an intelligent appointment reminder agent and a no-show prediction system that can proactively reach out to patients. I think this would be a great way to combine multiple skills and deliver visible value to the business.
 
+## Proposed AI Agent Solution
+
+I want to build an **Intelligent Appointment Management Agent** for the Patient Experience and Access department. This agent would predict which patients are at high risk of no-showing using historical data, then automatically send personalized reminders via SMS, email, or app notification, and even offer easy rescheduling options. 
+
+It would need access to appointment history, patient demographics, past no-show patterns, and real-time schedule data from both the US and UK EHR systems. The agent would interact with patients through natural conversation and with clinic staff by flagging high-risk appointments in a dashboard or sending daily summaries to the operations team.
+
 ## AI Engineering · 4Geeks Academy — Company Briefing
 
 ---
