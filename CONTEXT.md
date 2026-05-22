@@ -1,6 +1,7 @@
 # Welcome to HealthCore
 
 ## Why I chose HealthCore
+
 I chose HealthCore because it offers a good mix of technical complexity and real world impact. Working across two countries with different regulations like HIPAA and GDPR, plus two separate electronic health record systems, presents some serious integration and data challenges that I want to tackle. I see a lot of opportunity to build meaningful automations like no-show prediction and claims review tools that could actually move the needle on their biggest problems. This project also gives me a chance to learn how to handle sensitive healthcare data properly and build systems that work in a regulated environment. A friend of mine who is a nurse recently asked me if I could help build something useful for hospitals or clinics, so this feels like a great opportunity to practice those kinds of solutions and have something solid to show her later.
 
 ## Interesting department problems
@@ -8,6 +9,10 @@ I chose HealthCore because it offers a good mix of technical complexity and real
 The two departments whose problems I find most interesting are "Patient Experience and Access" and "Revenue Cycle and Billing". 
 
 I like Patient Experience because the 22 percent no show rate is a big issue that wastes a lot of time and money, and there is clearly room to build smarter reminder systems and prediction tools. Revenue Cycle and Billing also caught my attention because the high claims denial rate is costing them a lot of revenue, and I think AI could help review claims and suggest better coding before they are submitted.
+
+## Automation I Am Most Looking Forward To
+
+From the milestone map, I am most excited to work on Milestone 8: Agents. Specifically, building an intelligent appointment reminder agent and a no-show prediction system that can proactively reach out to patients. I think this would be a great way to combine multiple skills and deliver visible value to the business.
 
 ## AI Engineering · 4Geeks Academy — Company Briefing
 
