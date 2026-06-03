@@ -2,41 +2,58 @@ const form = document.getElementById("patient-form");
 
 if (form) {
   function getCurrentLang() {
-    return document.documentElement.getAttribute("data-current-lang") === "es" ? "es" : "en";
+    return document.documentElement.getAttribute("data-current-lang") === "es"
+      ? "es"
+      : "en";
   }
 
   const messages = {
     en: {
-      first_name: "First name must contain only letters and be at least 2 characters",
-      last_name: "Last name must contain only letters and be at least 2 characters",
-      date_of_birth: "Enter a valid date of birth. Patient must be between 0 and 120 years old",
+      first_name:
+        "First name must contain only letters and be at least 2 characters",
+      last_name:
+        "Last name must contain only letters and be at least 2 characters",
+      date_of_birth:
+        "Enter a valid date of birth. Patient must be between 0 and 120 years old",
       email: "Enter a valid email address (example: name@provider.com)",
       phone: "Phone must include a country code (example: +1 305 555 0191)",
       preferred_language: "Select your preferred language",
       preferred_clinic: "Select the clinic you would like to visit",
-      preferred_date: "Select a date at least 1 business day from today and no more than 60 days ahead",
+      preferred_date:
+        "Select a date at least 1 business day from today and no more than 60 days ahead",
       preferred_time: "Select your preferred time of day",
       service_type: "Select the type of care you are looking for",
-      paediatric: "Paediatric Care is available for patients under 18. Please check the date of birth or select a different service.",
-      new_patient: "Please indicate whether this is your first visit to HealthCore",
+      paediatric:
+        "Paediatric Care is available for patients under 18. Please check the date of birth or select a different service.",
+      new_patient:
+        "Please indicate whether this is your first visit to HealthCore",
       has_insurance: "Please indicate whether you have health insurance",
       insurance_provider: "Please enter your insurance provider name",
-      insurance_member_id: "Member ID must be between 6 and 20 alphanumeric characters",
-      health_concern: "Please describe your health concern in at least 20 characters (%X% characters remaining)",
-      contact_consent: "You must consent to being contacted before submitting this form",
-      patient_id: "Patient ID must match format HC-XXXXXX (letters and numbers)",
+      insurance_member_id:
+        "Member ID must be between 6 and 20 alphanumeric characters",
+      health_concern:
+        "Please describe your health concern in at least 20 characters (%X% characters remaining)",
+      contact_consent:
+        "You must consent to being contacted before submitting this form",
+      patient_id:
+        "Patient ID must match format HC-XXXXXX (letters and numbers)",
       timeClinicWarning:
-        "Evening requests are valid for this clinic, but slots may be limited because it closes before 8pm."
+        "Evening requests are valid for this clinic, but slots may be limited because it closes before 8pm.",
     },
     es: {
-      first_name: "El nombre debe contener solo letras y tener al menos 2 caracteres",
-      last_name: "El apellido debe contener solo letras y tener al menos 2 caracteres",
-      date_of_birth: "Ingresa una fecha de nacimiento valida. El paciente debe tener entre 0 y 120 anos",
+      first_name:
+        "El nombre debe contener solo letras y tener al menos 2 caracteres",
+      last_name:
+        "El apellido debe contener solo letras y tener al menos 2 caracteres",
+      date_of_birth:
+        "Ingresa una fecha de nacimiento valida. El paciente debe tener entre 0 y 120 anos",
       email: "Ingresa un correo valido (ejemplo: nombre@proveedor.com)",
-      phone: "El telefono debe incluir codigo de pais (ejemplo: +34 612 345 678)",
+      phone:
+        "El telefono debe incluir codigo de pais (ejemplo: +34 612 345 678)",
       preferred_language: "Selecciona tu idioma preferido",
       preferred_clinic: "Selecciona la clinica que deseas visitar",
-      preferred_date: "Selecciona una fecha con al menos 1 dia habil desde hoy y no mas de 60 dias",
+      preferred_date:
+        "Selecciona una fecha con al menos 1 dia habil desde hoy y no mas de 60 dias",
       preferred_time: "Selecciona tu horario preferido",
       service_type: "Selecciona el tipo de atencion que buscas",
       paediatric:
@@ -44,13 +61,17 @@ if (form) {
       new_patient: "Indica si es tu primera visita a HealthCore",
       has_insurance: "Indica si tienes seguro medico",
       insurance_provider: "Ingresa el nombre de tu proveedor de seguro",
-      insurance_member_id: "El ID de miembro debe tener entre 6 y 20 caracteres alfanumericos",
-      health_concern: "Describe tu motivo de consulta con al menos 20 caracteres (%X% caracteres restantes)",
-      contact_consent: "Debes dar consentimiento para que podamos contactarte antes de enviar",
-      patient_id: "El ID de paciente debe tener formato HC-XXXXXX (letras y numeros)",
+      insurance_member_id:
+        "El ID de miembro debe tener entre 6 y 20 caracteres alfanumericos",
+      health_concern:
+        "Describe tu motivo de consulta con al menos 20 caracteres (%X% caracteres restantes)",
+      contact_consent:
+        "Debes dar consentimiento para que podamos contactarte antes de enviar",
+      patient_id:
+        "El ID de paciente debe tener formato HC-XXXXXX (letras y numeros)",
       timeClinicWarning:
-        "Las solicitudes en horario nocturno son validas para esta clinica, pero puede haber menos disponibilidad porque cierra antes de las 8pm."
-    }
+        "Las solicitudes en horario nocturno son validas para esta clinica, pero puede haber menos disponibilidad porque cierra antes de las 8pm.",
+    },
   };
 
   const clinicClosingHour = {
@@ -59,7 +80,7 @@ if (form) {
     "HealthCore San Antonio": 18,
     "HealthCore Miami": 20,
     "HealthCore Orlando": 18,
-    "HealthCore Atlanta": 19
+    "HealthCore Atlanta": 19,
   };
 
   const fields = {
@@ -77,11 +98,15 @@ if (form) {
     insurance_member_id: document.getElementById("insurance_member_id"),
     patient_id: document.getElementById("patient_id"),
     health_concern: document.getElementById("health_concern"),
-    contact_consent: document.getElementById("contact_consent")
+    contact_consent: document.getElementById("contact_consent"),
   };
 
-  const newPatientRadios = document.querySelectorAll('input[name="new_patient"]');
-  const hasInsuranceRadios = document.querySelectorAll('input[name="has_insurance"]');
+  const newPatientRadios = document.querySelectorAll(
+    'input[name="new_patient"]',
+  );
+  const hasInsuranceRadios = document.querySelectorAll(
+    'input[name="has_insurance"]',
+  );
   const insuranceFieldsWrapper = document.getElementById("insurance-fields");
   const patientIdWrapper = document.getElementById("patient-id-wrapper");
   const healthCounter = document.getElementById("health-counter");
@@ -133,7 +158,10 @@ if (form) {
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
     const monthDifference = today.getMonth() - dob.getMonth();
-    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < dob.getDate())
+    ) {
       age -= 1;
     }
     return age;
@@ -223,7 +251,9 @@ if (form) {
 
     const today = startOfDay(new Date());
     const minDate = startOfDay(addBusinessDays(today, 1));
-    const maxDate = startOfDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60));
+    const maxDate = startOfDay(
+      new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60),
+    );
     const normalizedSelected = startOfDay(selected);
 
     if (normalizedSelected < minDate || normalizedSelected > maxDate) {
@@ -243,7 +273,10 @@ if (form) {
     }
 
     const age = calculateAge(fields.date_of_birth.value);
-    if (value === "Paediatric Care" && (!fields.date_of_birth.value || Number.isNaN(age) || age >= 18)) {
+    if (
+      value === "Paediatric Care" &&
+      (!fields.date_of_birth.value || Number.isNaN(age) || age >= 18)
+    ) {
       setError("service_type", text("paediatric"));
       return false;
     }
@@ -377,7 +410,10 @@ if (form) {
 
     if (value.length < 20 || value.length > 500) {
       const remaining = Math.max(0, 20 - value.length);
-      const errorMessage = text("health_concern").replace("%X%", String(remaining));
+      const errorMessage = text("health_concern").replace(
+        "%X%",
+        String(remaining),
+      );
       setError("health_concern", errorMessage);
       return false;
     }
@@ -412,7 +448,7 @@ if (form) {
       validateHasInsurance(),
       validateInsuranceFields(),
       validateHealthConcern(),
-      validateConsent()
+      validateConsent(),
     ];
 
     updateTimeClinicWarning();
@@ -427,7 +463,9 @@ if (form) {
   });
   fields.email.addEventListener("input", validateEmail);
   fields.phone.addEventListener("input", validatePhone);
-  fields.preferred_language.addEventListener("change", () => validateRequiredSelect("preferred_language"));
+  fields.preferred_language.addEventListener("change", () =>
+    validateRequiredSelect("preferred_language"),
+  );
   fields.preferred_clinic.addEventListener("change", () => {
     validateRequiredSelect("preferred_clinic");
     updateTimeClinicWarning();
