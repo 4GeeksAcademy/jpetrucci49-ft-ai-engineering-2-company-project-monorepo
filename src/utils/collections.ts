@@ -44,3 +44,17 @@ export function sortAppointmentsByDate(
 
   return direction === "desc" ? sorted.reverse() : sorted;
 }
+
+export function groupClaimsBy(
+  claims: Claim[],
+  key: "locationId" | "payerName" | "status" | "serviceType"
+): Record<string, Claim[]> {
+  return claims.reduce<Record<string, Claim[]>>((acc, claim) => {
+    const groupKey = claim[key];
+
+    if (!acc[groupKey]) acc[groupKey] = [];
+
+    acc[groupKey].push(claim);
+    return acc;
+  }, {});
+}
