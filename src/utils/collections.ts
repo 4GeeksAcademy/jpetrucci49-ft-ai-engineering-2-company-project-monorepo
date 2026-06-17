@@ -29,3 +29,18 @@ export function sortClaimsById(claims: Claim[], direction: "asc" | "desc"): Clai
   const sorted = [...claims].sort((a, b) => a.claimId.localeCompare(b.claimId));
   return direction === "desc" ? sorted.reverse() : sorted;
 }
+
+export function sortAppointmentsByDate(
+  appointments: Appointment[],
+  direction: "asc" | "desc"
+): Appointment[] {
+  const sorted = [...appointments].sort((a, b) => {
+    const dateCompare = a.scheduledDate.localeCompare(b.scheduledDate);
+
+    if (dateCompare !== 0) return dateCompare;
+
+    return a.scheduledTime.localeCompare(b.scheduledTime);
+  });
+
+  return direction === "desc" ? sorted.reverse() : sorted;
+}
