@@ -1,4 +1,4 @@
-import type { Claim } from "../entities";
+import type { Appointment, Claim, Location } from "../entities";
 
 const roundTo = (value: number, decimals: number): number => {
   const factor = 10 ** decimals;
@@ -7,6 +7,14 @@ const roundTo = (value: number, decimals: number): number => {
 
 const calculateRate = (total: number, matching: number): number => (
   total === 0 ? 0 : roundTo((matching / total) * 100, 2)
+);
+
+const toUtcDate = (dateString: string): Date => (
+  new Date(`${dateString}T00:00:00.000Z`)
+);
+
+const isValidDate = (date: Date): boolean => (
+  !Number.isNaN(date.getTime())
 );
 
 export function calculateDenialRate(claims: Claim[]): number {
@@ -56,4 +64,33 @@ export function flagHighDenialPayers(claims: Claim[], threshold: number = 8): st
   return Object.entries(byPayer)
     .filter(([, rate]) => rate > threshold)
     .map(([payer]) => payer);
+}
+
+export function calculateNoShowCost(
+  appointments: Appointment[],
+  location: Location,
+  weekEndingDate: string
+): number {
+  const endDate = toUtcDate(weekEndingDate);
+  if (!isValidDate(endDate)) {
+    throw new Error("weekEndingDate must be a valid ISO date string.");
+  }
+
+  const startDate = new Date(endDate.getTime());
+  startDate.setUTCDate(startDate.getUTCDate() - 6);
+
+  const total = appointments
+    .filter((appointment) => {
+      if (appointment.locationId !== location.locationId) return false;
+
+      if (appointment.status !== "no_show") return false;
+
+      const appointmentDate = toUtcDate(appointment.scheduledDate);
+      return appointmentDate.getTime() >= startDate.getTime() && appointmentDate.getTime() <= endDate.getTime();
+    })
+    .reduce((sum, appointment) => {
+      return sum + location.averageConsultationFee[appointment.serviceType];
+    }, 0);
+
+  return roundTo(total, 2);
 }
