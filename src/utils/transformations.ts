@@ -210,3 +210,22 @@ export function getCliniciansAtRisk(clinicians: Clinician[], asOfDate: string): 
 
   return clinicians.filter((clinician) => atRiskIds.has(clinician.clinicianId));
 }
+
+export function getCliniciansWithExpiringLicences(
+  clinicians: Clinician[],
+  asOfDate: string,
+  daysThreshold: number
+): Clinician[] {
+  const asOf = toUtcDate(asOfDate);
+  if (!isValidDate(asOf)) {
+    throw new Error("asOfDate must be a valid ISO date string.");
+  }
+
+  return clinicians.filter((clinician) => {
+    const expiryDate = toUtcDate(clinician.licenceExpiryDate);
+    if (!isValidDate(expiryDate)) return false;
+
+    const remainingDays = daysBetween(asOf, expiryDate);
+    return remainingDays >= 0 && remainingDays <= daysThreshold;
+  });
+}
