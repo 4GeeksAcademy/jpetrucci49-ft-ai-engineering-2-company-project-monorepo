@@ -17,3 +17,19 @@ export function calculateDenialRate(claims: Claim[]): number {
   const deniedCount = claims.filter((claim) => claim.status === "denied").length;
   return calculateRate(claims.length, deniedCount);
 }
+
+export function denialRateByPayer(claims: Claim[]): Record<string, number> {
+  const groups = claims.reduce<Record<string, Claim[]>>((acc, claim) => {
+    if (!acc[claim.payerName]) acc[claim.payerName] = [];
+
+    acc[claim.payerName].push(claim);
+    return acc;
+  }, {});
+
+  return Object.fromEntries(
+    Object.entries(groups).map(([payerName, payerClaims]) => {
+      const deniedCount = payerClaims.filter((claim) => claim.status === "denied").length;
+      return [payerName, calculateRate(payerClaims.length, deniedCount)];
+    })
+  );
+}
