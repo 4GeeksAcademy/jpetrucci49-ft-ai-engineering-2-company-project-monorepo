@@ -49,3 +49,11 @@ export function denialRateByLocation(claims: Claim[]): Record<string, number> {
     })
   );
 }
+
+export function flagHighDenialPayers(claims: Claim[], threshold: number = 8): string[] {
+  const byPayer = denialRateByPayer(claims);
+
+  return Object.entries(byPayer)
+    .filter(([, rate]) => rate > threshold)
+    .map(([payer]) => payer);
+}
