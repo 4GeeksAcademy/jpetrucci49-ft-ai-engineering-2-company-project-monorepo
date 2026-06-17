@@ -1,4 +1,11 @@
-import type { Appointment, Claim, Location } from "../entities";
+import type { 
+  Appointment,
+  Claim,
+  Clinician,
+  CMEReport,
+  CMEStatus,
+  Location,
+} from "../entities";
 
 const roundTo = (value: number, decimals: number): number => {
   const factor = 10 ** decimals;
@@ -16,6 +23,41 @@ const toUtcDate = (dateString: string): Date => (
 const isValidDate = (date: Date): boolean => (
   !Number.isNaN(date.getTime())
 );
+
+const daysBetween = (start: Date, end: Date): number => {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((end.getTime() - start.getTime()) / msPerDay);
+}
+
+const getCycleEndDate = (cmeYearStartDate: string): Date => {
+  const cycleStart = toUtcDate(cmeYearStartDate);
+  const cycleEnd = new Date(cycleStart.getTime());
+  cycleEnd.setUTCFullYear(cycleEnd.getUTCFullYear() + 1);
+  cycleEnd.setUTCDate(cycleEnd.getUTCDate() - 1);
+  return cycleEnd;
+}
+
+const getComplianceStatus = (clinician: Clinician, asOfDate: Date): CMEStatus => {
+  const cycleStart = toUtcDate(clinician.cmeYearStartDate);
+  const cycleEnd = getCycleEndDate(clinician.cmeYearStartDate);
+
+  if (clinician.cmeHoursLogged >= clinician.cmeHoursRequired) return "complete";
+
+  if (asOfDate.getTime() > cycleEnd.getTime() && clinician.cmeHoursLogged < clinician.cmeHoursRequired) return "overdue";
+
+  const totalCycleDays = Math.max(1, daysBetween(cycleStart, cycleEnd) + 1);
+  const elapsedDays = Math.min(Math.max(daysBetween(cycleStart, asOfDate) + 1, 0), totalCycleDays);
+  const elapsedPercent = (elapsedDays / totalCycleDays) * 100;
+
+  const percentComplete =
+    clinician.cmeHoursRequired === 0
+      ? 100
+      : (clinician.cmeHoursLogged / clinician.cmeHoursRequired) * 100;
+
+  if (percentComplete < elapsedPercent - 15) return "at_risk";
+
+  return "on_track";
+}
 
 export function calculateDenialRate(claims: Claim[]): number {
   if (claims.length === 0) {
@@ -120,4 +162,40 @@ export function flagHighNoShowLocations(
   return Object.entries(rates)
     .filter(([, rate]) => rate > threshold)
     .map(([locationId]) => locationId);
+}
+
+export function generateCMEReport(clinicians: Clinician[], asOfDate: string): CMEReport[] {
+  const asOf = toUtcDate(asOfDate);
+  if (!isValidDate(asOf)) {
+    throw new Error("asOfDate must be a valid ISO date string.");
+  }
+
+  return clinicians.map((clinician) => {
+    const hoursRemaining = Math.max(0, clinician.cmeHoursRequired - clinician.cmeHoursLogged);
+    const percentComplete =
+      clinician.cmeHoursRequired === 0
+        ? 100
+        : roundTo((clinician.cmeHoursLogged / clinician.cmeHoursRequired) * 100, 1);
+
+    const cycleEnd = getCycleEndDate(clinician.cmeYearStartDate);
+    const daysRemainingInCycle = daysBetween(asOf, cycleEnd);
+
+    const licenceExpiry = toUtcDate(clinician.licenceExpiryDate);
+    const licenceDaysRemaining = daysBetween(asOf, licenceExpiry);
+
+    return {
+      clinicianId: clinician.clinicianId,
+      fullName: `${clinician.firstName} ${clinician.lastName}`,
+      role: clinician.role,
+      locationId: clinician.locationId,
+      hoursRequired: clinician.cmeHoursRequired,
+      hoursLogged: clinician.cmeHoursLogged,
+      hoursRemaining,
+      percentComplete,
+      daysRemainingInCycle,
+      complianceStatus: getComplianceStatus(clinician, asOf),
+      licenceExpiryDate: clinician.licenceExpiryDate,
+      licenceDaysRemaining,
+    };
+  });
 }
