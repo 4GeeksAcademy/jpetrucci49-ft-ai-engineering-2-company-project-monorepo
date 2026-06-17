@@ -33,3 +33,19 @@ export function denialRateByPayer(claims: Claim[]): Record<string, number> {
     })
   );
 }
+
+export function denialRateByLocation(claims: Claim[]): Record<string, number> {
+  const groups = claims.reduce<Record<string, Claim[]>>((acc, claim) => {
+    if (!acc[claim.locationId]) acc[claim.locationId] = [];
+
+    acc[claim.locationId].push(claim);
+    return acc;
+  }, {});
+
+  return Object.fromEntries(
+    Object.entries(groups).map(([locationId, locationClaims]) => {
+      const deniedCount = locationClaims.filter((claim) => claim.status === "denied").length;
+      return [locationId, calculateRate(locationClaims.length, deniedCount)];
+    })
+  );
+}
