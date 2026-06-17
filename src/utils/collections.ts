@@ -1,14 +1,16 @@
 import type { Claim } from "../entities";
 
+type FilterType = Partial<Pick<Claim, "locationId" | "status" | "payerName" | "serviceType">>;
+
 export function filterClaims(
   claims: Claim[],
-  filters: Partial<Pick<Claim, "locationId" | "status" | "payerName" | "serviceType">>
+  filters: FilterType
 ): Claim[] {
-  return claims.filter((claim) => (filters.locationId !== undefined && claim.locationId !== filters.locationId)
-      || (filters.status !== undefined && claim.status !== filters.status)
-      || (filters.payerName !== undefined && claim.payerName !== filters.payerName)
-      || (filters.serviceType !== undefined && claim.serviceType !== filters.serviceType) 
+  return claims.filter((claim) => (
+    (Object.keys(filters) as Array<keyof FilterType>).every(
+      filter => filters[filter] !== undefined && claim[filter] !== filters[filter]
+    )
         ? false
         : true
-  );
+  ));
 }
