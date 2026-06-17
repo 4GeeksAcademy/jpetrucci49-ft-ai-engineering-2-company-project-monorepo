@@ -94,3 +94,19 @@ export function calculateNoShowCost(
 
   return roundTo(total, 2);
 }
+
+export function noShowRateByLocation(appointments: Appointment[]): Record<string, number> {
+  const groups = appointments.reduce<Record<string, Appointment[]>>((acc, appointment) => {
+    if (!acc[appointment.locationId]) acc[appointment.locationId] = [];
+
+    acc[appointment.locationId].push(appointment);
+    return acc;
+  }, {});
+
+  return Object.fromEntries(
+    Object.entries(groups).map(([locationId, locationAppointments]) => {
+      const noShowCount = locationAppointments.filter((appointment) => appointment.status === "no_show").length;
+      return [locationId, calculateRate(locationAppointments.length, noShowCount)];
+    })
+  );
+}
