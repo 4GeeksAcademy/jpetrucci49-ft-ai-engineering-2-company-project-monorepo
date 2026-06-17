@@ -110,3 +110,14 @@ export function noShowRateByLocation(appointments: Appointment[]): Record<string
     })
   );
 }
+
+export function flagHighNoShowLocations(
+  appointments: Appointment[],
+  threshold: number = 20
+): string[] {
+  const rates = noShowRateByLocation(appointments);
+
+  return Object.entries(rates)
+    .filter(([, rate]) => rate > threshold)
+    .map(([locationId]) => locationId);
+}
