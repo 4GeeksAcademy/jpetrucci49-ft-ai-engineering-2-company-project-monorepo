@@ -24,3 +24,8 @@ export function filterAppointmentsByStatus(
   const allowed = new Set(status);
   return appointments.filter((appointment) => allowed.has(appointment.status));
 }
+
+export function sortClaimsById(claims: Claim[], direction: "asc" | "desc"): Claim[] {
+  const sorted = [...claims].sort((a, b) => a.claimId.localeCompare(b.claimId));
+  return direction === "desc" ? sorted.reverse() : sorted;
+}
