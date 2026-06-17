@@ -1,4 +1,4 @@
-import type { Claim } from "../entities";
+import type { Appointment, AppointmentStatus, Claim } from "../entities";
 
 type FilterType = Partial<Pick<Claim, "locationId" | "status" | "payerName" | "serviceType">>;
 
@@ -13,4 +13,14 @@ export function filterClaims(
         ? false
         : true
   ));
+}
+
+export function filterAppointmentsByStatus(
+  appointments: Appointment[],
+  status: AppointmentStatus[]
+): Appointment[] {
+  if (status.length === 0) return [];
+
+  const allowed = new Set(status);
+  return appointments.filter((appointment) => allowed.has(appointment.status));
 }
