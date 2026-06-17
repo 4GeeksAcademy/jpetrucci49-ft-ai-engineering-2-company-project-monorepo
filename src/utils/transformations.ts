@@ -199,3 +199,14 @@ export function generateCMEReport(clinicians: Clinician[], asOfDate: string): CM
     };
   });
 }
+
+export function getCliniciansAtRisk(clinicians: Clinician[], asOfDate: string): Clinician[] {
+  const report = generateCMEReport(clinicians, asOfDate);
+  const atRiskIds = new Set(
+    report
+      .filter((item) => item.complianceStatus === "at_risk" || item.complianceStatus === "overdue")
+      .map((item) => item.clinicianId)
+  );
+
+  return clinicians.filter((clinician) => atRiskIds.has(clinician.clinicianId));
+}
