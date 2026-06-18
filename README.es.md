@@ -7,6 +7,13 @@ _Plantilla base para proyectos transversales del Programa de Carrera en Ingenier
 
 _Las instrucciones están [disponibles en inglés](./README.md)._
 
+Antes de abrir las paginas HTML en local, compila una vez la hoja de estilos compartida de Tailwind:
+
+- Instala dependencias: `npm install`
+- Compila CSS: `npm run build:css`
+
+Puedes probar funciones utilitarias manualmente en `utility-test.html` con datos en texto (JSON/CSV/YAML) o subiendo archivos de prueba.
+
 ---
 
 ## Propósito
