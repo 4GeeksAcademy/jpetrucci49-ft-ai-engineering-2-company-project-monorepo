@@ -61,3 +61,7 @@ export function validateClinician(clinician: Clinician): ValidationResult {
     errors,
   };
 }
+
+export function isDenialRateAboveThreshold(rate: number, threshold: number = 8): boolean {
+  return rate > threshold;
+}
