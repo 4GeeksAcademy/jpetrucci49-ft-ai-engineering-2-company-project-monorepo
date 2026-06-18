@@ -2,6 +2,13 @@
 
 Run application with `npx serve . -l 4173`
 
+Milestone 2 utilities workflow:
+
+- Install dependencies: `npm install`
+- Run TypeScript checks: `npm run typecheck`
+- Run utility tests: `npm test`
+- Interact with utility functions: `npm run utils:playground`
+
 [![4Geeks Academy](https://img.shields.io/badge/4Geeks-Academy-blue)](https://4geeksacademy.com)
 [![AI Engineering](https://img.shields.io/badge/track-AI%20Engineering-green)](https://4geeksacademy.com/es/programas-de-carrera/ingenieria-ia)
 

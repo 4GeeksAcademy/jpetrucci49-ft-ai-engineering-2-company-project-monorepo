@@ -6,13 +6,13 @@ export function filterClaims(
   claims: Claim[],
   filters: FilterType
 ): Claim[] {
-  return claims.filter((claim) => (
-    (Object.keys(filters) as Array<keyof FilterType>).every(
-      filter => filters[filter] !== undefined && claim[filter] !== filters[filter]
-    )
-        ? false
-        : true
-  ));
+  return claims.filter((claim) =>
+    (Object.keys(filters) as Array<keyof FilterType>).every((filter) => {
+      const filterValue = filters[filter];
+      if (filterValue === undefined) return true;
+      return claim[filter] === filterValue;
+    })
+  );
 }
 
 export function filterAppointmentsByStatus(
