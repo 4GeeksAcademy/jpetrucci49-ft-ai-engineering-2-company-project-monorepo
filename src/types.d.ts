@@ -89,6 +89,8 @@ declare global {
     licenceDaysRemaining: number;
   }
 
+  type ConsultantFee = Record<ServiceType, number>;
+
   interface ClinicLocation {
     locationId: string;
     name: string;
@@ -96,7 +98,7 @@ declare global {
     stateOrCountry: string;
     country: "US" | "UK";
     phone: string;
-    averageConsultationFee: Record<ServiceType, number>;
+    averageConsultationFee: ConsultantFee;
   }
 
   type FilterType = Partial<Pick<Claim, "locationId" | "status" | "payerName" | "serviceType">>;

@@ -17,11 +17,11 @@
     <meta
       name="description"
       content="Submit your HealthCore patient enquiry with structured details so our front desk can contact you within one business day." />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./assets/css/tailwind.css" />
   </head>
   <body class="bg-slate-50 text-slate-900">
     <header class="bg-white border-b border-slate-200" role="banner">
-      <nav class="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between" aria-label="Main navigation">
+      <nav class="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between" aria-label="Main navigation">
         <a href="index.html" class="text-2xl font-bold text-teal-700">HealthCore</a>
         <div class="flex items-center gap-4 text-sm sm:text-base">
           <a href="index.html" class="hover:text-teal-700">
@@ -30,12 +30,34 @@
           <a href="application.html" class="font-semibold text-teal-700">
             <span data-label-en="Application" data-label-es="Formulario">Application</span>
           </a>
+          <a href="utility-test.html" class="hover:text-teal-700">
+            <span data-label-en="Utilities" data-label-es="Utilidades">Utilities</span>
+          </a>
           <button type="button" data-lang-toggle="en" class="font-semibold text-teal-700" aria-pressed="true">
             EN
           </button>
           <span aria-hidden="true">|</span>
           <button type="button" data-lang-toggle="es" class="hover:text-teal-700" aria-pressed="false">ES</button>
         </div>
+      </nav>
+      <nav
+        class="mx-auto max-w-6xl px-4 pb-4 flex flex-wrap items-center gap-4 text-xs sm:text-sm"
+        aria-label="Application section navigation">
+        <a href="#form-title" class="text-slate-600 hover:text-teal-700">
+          <span data-label-en="Overview" data-label-es="Resumen">Overview</span>
+        </a>
+        <a href="#personal-details" class="text-slate-600 hover:text-teal-700">
+          <span data-label-en="Personal details" data-label-es="Datos personales">Personal details</span>
+        </a>
+        <a href="#enquiry-details" class="text-slate-600 hover:text-teal-700">
+          <span data-label-en="Enquiry details" data-label-es="Detalles de la consulta">Enquiry details</span>
+        </a>
+        <a href="#insurance-status" class="text-slate-600 hover:text-teal-700">
+          <span data-label-en="Insurance" data-label-es="Seguro">Insurance</span>
+        </a>
+        <a href="#health-concern-section" class="text-slate-600 hover:text-teal-700">
+          <span data-label-en="Health concern" data-label-es="Motivo de consulta">Health concern</span>
+        </a>
       </nav>
     </header>
 
@@ -66,7 +88,7 @@
         class="mt-8 rounded-xl bg-white p-6 sm:p-8 shadow-sm border border-slate-200"
         aria-label="Patient enquiry form section">
         <form id="patient-form" novalidate>
-          <fieldset>
+          <fieldset id="personal-details">
             <legend class="text-xl font-semibold text-teal-700">
               <span data-label-en="Personal details" data-label-es="Datos personales">Personal details</span>
             </legend>
@@ -141,7 +163,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="mt-8">
+          <fieldset id="enquiry-details" class="mt-8">
             <legend class="text-xl font-semibold text-teal-700">
               <span data-label-en="Enquiry details" data-label-es="Detalles de la consulta">Enquiry details</span>
             </legend>
@@ -292,7 +314,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="mt-8">
+          <fieldset id="insurance-status" class="mt-8">
             <legend class="text-xl font-semibold text-teal-700">
               <span data-label-en="Insurance and patient status" data-label-es="Seguro y estado del paciente"
                 >Insurance and patient status</span
@@ -386,7 +408,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="mt-8">
+          <fieldset id="health-concern-section" class="mt-8">
             <legend class="text-xl font-semibold text-teal-700">
               <span data-label-en="Health concern" data-label-es="Motivo de consulta">Health concern</span>
             </legend>

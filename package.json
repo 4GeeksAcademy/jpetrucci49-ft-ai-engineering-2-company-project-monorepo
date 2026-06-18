@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "npx serve . -l 4173",
+    "build:css": "tailwindcss -c tailwind.config.js -i ./styles/tailwind.css -o ./assets/css/tailwind.css --minify",
+    "build:css:watch": "tailwindcss -c tailwind.config.js -i ./styles/tailwind.css -o ./assets/css/tailwind.css --watch",
+    "build:utility-test": "esbuild ./src/utility-test.ts --bundle --format=esm --platform=browser --outfile=./assets/js/utility-test.js",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "utils:playground": "tsx src/utils-playground.ts"
   },
   "devDependencies": {
+    "esbuild": "^0.25.6",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
