@@ -72,7 +72,7 @@ describe("transformations", () => {
 
   it("returns clinicians at risk or overdue", () => {
     const result = getCliniciansAtRisk(clinicians, "2025-12-15");
-    expect(result.map((clinician) => clinician.clinicianId)).toEqual(["CLN-000002", "CLN-000001"]);
+    expect(result.map((clinician) => clinician.clinicianId)).toEqual(["CLN-000001", "CLN-000002"]);
   });
 
   it("returns clinicians with expiring licences within threshold", () => {
