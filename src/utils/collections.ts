@@ -1,7 +1,3 @@
-import type { Appointment, AppointmentStatus, Claim } from "../entities";
-
-type FilterType = Partial<Pick<Claim, "locationId" | "status" | "payerName" | "serviceType">>;
-
 export function filterClaims(
   claims: Claim[],
   filters: FilterType

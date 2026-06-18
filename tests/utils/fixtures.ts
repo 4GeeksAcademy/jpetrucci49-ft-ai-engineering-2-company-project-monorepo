@@ -1,6 +1,4 @@
-import type { Appointment, Claim, Clinician, Location } from "../../src/entities";
-
-export const locations: Location[] = [
+export const locations: ClinicLocation[] = [
   {
     locationId: "us-tx-001",
     name: "HealthCore Austin Central",

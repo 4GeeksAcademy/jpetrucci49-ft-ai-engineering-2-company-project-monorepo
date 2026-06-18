@@ -1,12 +1,3 @@
-import type { 
-  Appointment,
-  Claim,
-  Clinician,
-  CMEReport,
-  CMEStatus,
-  Location,
-} from "../entities";
-
 const roundTo = (value: number, decimals: number): number => {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -110,7 +101,7 @@ export function flagHighDenialPayers(claims: Claim[], threshold: number = 8): st
 
 export function calculateNoShowCost(
   appointments: Appointment[],
-  location: Location,
+  location: ClinicLocation,
   weekEndingDate: string
 ): number {
   const endDate = toUtcDate(weekEndingDate);

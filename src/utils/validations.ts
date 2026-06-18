@@ -1,10 +1,3 @@
-import type { Claim, Clinician } from "../entities";
-
-interface ValidationResult {
-  valid: boolean;
-  errors: string[];
-}
-
 const isValidDateString = (dateString: string): boolean => {
   const date = new Date(`${dateString}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime());

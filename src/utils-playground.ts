@@ -1,4 +1,3 @@
-import type { Appointment, Claim, Clinician, Location } from "./entities";
 import {
   collections,
   search,
