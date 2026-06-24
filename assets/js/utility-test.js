@@ -465,6 +465,9 @@ var clinicians = [
 ];
 
 // src/utility-test.ts
+function castInput(value) {
+  return value;
+}
 function requireElement(id) {
   const element = document.getElementById(id);
   if (!element) {
@@ -472,20 +475,6 @@ function requireElement(id) {
   }
   return element;
 }
-var fields = [
-  ["data-format", new HTMLSelectElement()],
-  ["utility-function", new HTMLSelectElement()],
-  ["test-data-input", new HTMLTextAreaElement()],
-  ["test-data-file", new HTMLInputElement()],
-  ["run-test", new HTMLButtonElement()],
-  ["load-template", new HTMLButtonElement()],
-  ["clear-test", new HTMLButtonElement()],
-  ["test-result", new HTMLElement()],
-  ["test-status", new HTMLElement()],
-  ["function-hint", new HTMLElement()]
-];
-var formFields = fields.map(([id, type]) => requireElement(id));
-console.log({ formFields });
 var formatSelect = requireElement("data-format");
 var functionSelect = requireElement("utility-function");
 var textInput = requireElement("test-data-input");
@@ -538,7 +527,7 @@ var functionCatalog = {
       es: '{ "claims": [...], "filters": { "payerName": "BlueCross" } }'
     },
     template: { claims: [], filters: { payerName: "BlueCross" } },
-    run: (input) => filterClaims(input.claims, input.filters)
+    run: (input) => filterClaims(castInput(input.claims), castInput(input.filters))
   },
   filterAppointmentsByStatus: {
     hint: {
@@ -546,7 +535,7 @@ var functionCatalog = {
       es: '{ "appointments": [...], "status": ["no_show", "completed"] }'
     },
     template: { appointments: [], status: ["no_show", "completed"] },
-    run: (input) => filterAppointmentsByStatus(input.appointments, input.status)
+    run: (input) => filterAppointmentsByStatus(castInput(input.appointments), castInput(input.status))
   },
   sortClaimsById: {
     hint: {
@@ -554,7 +543,7 @@ var functionCatalog = {
       es: '{ "claims": [...], "direction": "asc" }'
     },
     template: { claims: [], direction: "asc" },
-    run: (input) => sortClaimsById(input.claims, input.direction)
+    run: (input) => sortClaimsById(castInput(input.claims), castInput(input.direction))
   },
   sortAppointmentsByDate: {
     hint: {
@@ -562,7 +551,7 @@ var functionCatalog = {
       es: '{ "appointments": [...], "direction": "asc" }'
     },
     template: { appointments: [], direction: "asc" },
-    run: (input) => sortAppointmentsByDate(input.appointments, input.direction)
+    run: (input) => sortAppointmentsByDate(castInput(input.appointments), castInput(input.direction))
   },
   groupClaimsBy: {
     hint: {
@@ -570,7 +559,7 @@ var functionCatalog = {
       es: '{ "claims": [...], "key": "payerName" }'
     },
     template: { claims: [], key: "payerName" },
-    run: (input) => groupClaimsBy(input.claims, input.key)
+    run: (input) => groupClaimsBy(castInput(input.claims), castInput(input.key))
   },
   findClaimById: {
     hint: {
@@ -578,7 +567,7 @@ var functionCatalog = {
       es: '{ "claims": [...], "claimId": "CLM-000001" }'
     },
     template: { claims: [], claimId: "CLM-000001" },
-    run: (input) => findClaimById(input.claims, input.claimId)
+    run: (input) => findClaimById(castInput(input.claims), castInput(input.claimId))
   },
   findClinicianById: {
     hint: {
@@ -586,7 +575,7 @@ var functionCatalog = {
       es: '{ "clinicians": [...], "clinicianId": "CLN-000001" }'
     },
     template: { clinicians: [], clinicianId: "CLN-000001" },
-    run: (input) => findClinicianById(input.clinicians, input.clinicianId)
+    run: (input) => findClinicianById(castInput(input.clinicians), castInput(input.clinicianId))
   },
   binarySearchClaimById: {
     hint: {
@@ -594,27 +583,27 @@ var functionCatalog = {
       es: '{ "sortedClaims": [...], "targetId": "CLM-000001" }'
     },
     template: { sortedClaims: [], targetId: "CLM-000001" },
-    run: (input) => binarySearchClaimById(input.sortedClaims, input.targetId)
+    run: (input) => binarySearchClaimById(castInput(input.sortedClaims), castInput(input.targetId))
   },
   calculateDenialRate: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => calculateDenialRate(input.claims)
+    run: (input) => calculateDenialRate(castInput(input.claims))
   },
   denialRateByPayer: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => denialRateByPayer(input.claims)
+    run: (input) => denialRateByPayer(castInput(input.claims))
   },
   denialRateByLocation: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => denialRateByLocation(input.claims)
+    run: (input) => denialRateByLocation(castInput(input.claims))
   },
   flagHighDenialPayers: {
     hint: { en: '{ "claims": [...], "threshold": 8 }', es: '{ "claims": [...], "threshold": 8 }' },
     template: { claims: [], threshold: 8 },
-    run: (input) => flagHighDenialPayers(input.claims, input.threshold)
+    run: (input) => flagHighDenialPayers(castInput(input.claims), castInput(input.threshold))
   },
   calculateNoShowCost: {
     hint: {
@@ -642,32 +631,32 @@ var functionCatalog = {
       },
       weekEndingDate: "2025-03-11"
     },
-    run: (input) => calculateNoShowCost(input.appointments, input.location, input.weekEndingDate)
+    run: (input) => calculateNoShowCost(castInput(input.appointments), castInput(input.location), castInput(input.weekEndingDate))
   },
   noShowRateByLocation: {
     hint: { en: '{ "appointments": [...] }', es: '{ "appointments": [...] }' },
     template: { appointments: [] },
-    run: (input) => noShowRateByLocation(input.appointments)
+    run: (input) => noShowRateByLocation(castInput(input.appointments))
   },
   flagHighNoShowLocations: {
     hint: { en: '{ "appointments": [...], "threshold": 20 }', es: '{ "appointments": [...], "threshold": 20 }' },
     template: { appointments: [], threshold: 20 },
-    run: (input) => flagHighNoShowLocations(input.appointments, input.threshold)
+    run: (input) => flagHighNoShowLocations(castInput(input.appointments), castInput(input.threshold))
   },
   generateCMEReport: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30" }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30" }' },
     template: { clinicians: [], asOfDate: "2025-06-30" },
-    run: (input) => generateCMEReport(input.clinicians, input.asOfDate)
+    run: (input) => generateCMEReport(castInput(input.clinicians), castInput(input.asOfDate))
   },
   getCliniciansAtRisk: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30" }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30" }' },
     template: { clinicians: [], asOfDate: "2025-06-30" },
-    run: (input) => getCliniciansAtRisk(input.clinicians, input.asOfDate)
+    run: (input) => getCliniciansAtRisk(castInput(input.clinicians), castInput(input.asOfDate))
   },
   getCliniciansWithExpiringLicences: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30", "daysThreshold": 45 }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30", "daysThreshold": 45 }' },
     template: { clinicians: [], asOfDate: "2025-06-30", daysThreshold: 45 },
-    run: (input) => getCliniciansWithExpiringLicences(input.clinicians, input.asOfDate, input.daysThreshold)
+    run: (input) => getCliniciansWithExpiringLicences(castInput(input.clinicians), castInput(input.asOfDate), castInput(input.daysThreshold))
   },
   validateClaim: {
     hint: { en: '{ "claim": {...}, "knownLocationIds": ["us-tx-001", "us-fl-001"] }', es: '{ "claim": {...}, "knownLocationIds": ["us-tx-001", "us-fl-001"] }' },
@@ -686,7 +675,7 @@ var functionCatalog = {
       },
       knownLocationIds: ["us-tx-001", "us-fl-001"]
     },
-    run: (input) => validateClaim(input.claim, input.knownLocationIds)
+    run: (input) => validateClaim(castInput(input.claim), castInput(input.knownLocationIds))
   },
   validateClinician: {
     hint: { en: '{ "clinician": {...} }', es: '{ "clinician": {...} }' },
@@ -704,17 +693,17 @@ var functionCatalog = {
         cmeYearStartDate: "2025-01-01"
       }
     },
-    run: (input) => validateClinician(input.clinician)
+    run: (input) => validateClinician(castInput(input.clinician))
   },
   isDenialRateAboveThreshold: {
     hint: { en: '{ "rate": 9.2, "threshold": 8 }', es: '{ "rate": 9.2, "threshold": 8 }' },
     template: { rate: 9.2, threshold: 8 },
-    run: (input) => isDenialRateAboveThreshold(input.rate, input.threshold)
+    run: (input) => isDenialRateAboveThreshold(castInput(input.rate), castInput(input.threshold))
   },
   isNoShowRateAboveThreshold: {
     hint: { en: '{ "rate": 21, "threshold": 20 }', es: '{ "rate": 21, "threshold": 20 }' },
     template: { rate: 21, threshold: 20 },
-    run: (input) => isNoShowRateAboveThreshold(input.rate, input.threshold)
+    run: (input) => isNoShowRateAboveThreshold(castInput(input.rate), castInput(input.threshold))
   }
 };
 var fixtureTemplates = {
@@ -827,9 +816,7 @@ function stringifyResult(value) {
 function parseScalar(raw) {
   const value = raw.trim();
   if (value === "") return "";
-  if (value === "true") return true;
-  if (value === "false") return false;
-  if (value === "null") return null;
+  if (value === "true" || value === "false" || value === "null") return JSON.parse(value);
   if (value === "undefined") return void 0;
   if (!Number.isNaN(Number(value)) && /^-?\d+(\.\d+)?$/.test(value)) return Number(value);
   const quoted = value.match(/^(?:["'])(.*)(?:["'])$/);
@@ -943,9 +930,9 @@ function splitListValue(value) {
   if (typeof value !== "string") return [];
   return value.split(/[|,;]/).map((item) => item.trim()).filter(Boolean);
 }
-function stripFields(record, fields2) {
+function stripFields(record, fields) {
   const output = { ...record };
-  fields2.forEach((field) => {
+  fields.forEach((field) => {
     delete output[field];
   });
   return output;
@@ -1146,7 +1133,7 @@ async function getInputPayload() {
 }
 function normalizeInputForFunction(functionName, rawInput) {
   if (Array.isArray(rawInput)) return normalizeTableInput(functionName, rawInput);
-  if (rawInput && typeof rawInput === "object") return rawInput;
+  if (isPlainObject(rawInput)) return rawInput;
   return { input: rawInput };
 }
 function loadTemplate() {

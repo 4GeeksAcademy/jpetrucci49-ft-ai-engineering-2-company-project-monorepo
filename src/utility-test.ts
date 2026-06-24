@@ -4,8 +4,55 @@ import { appointments, claims, clinicians, locations } from "../tests/utils/fixt
 type Lang = "en" | "es";
 type DataFormat = "auto" | "json" | "csv" | "tsv" | "yaml" | "text";
 type StatusKind = "error" | "success" | "info";
-type FunctionRunnerInput = Record<string, unknown>;
-type DelimitedRow = Record<string, unknown>;
+
+/** JSON-like value produced by parsing user input (JSON, CSV, YAML, etc.). */
+type ParsedValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | ParsedValue[]
+  | { [key: string]: ParsedValue };
+
+/** One row from delimited (CSV/TSV) input, with camelCase-normalized keys. */
+type DelimitedRow = { [key: string]: ParsedValue };
+
+/** A value in a utility function input object — parsed JSON or fixture entity data. */
+type InputValue =
+  | ParsedValue
+  | Claim
+  | Claim[]
+  | Appointment
+  | Appointment[]
+  | Clinician
+  | Clinician[]
+  | ClinicLocation
+  | FilterType;
+
+/** Normalized argument object passed to a utility function runner. */
+type FunctionRunnerInput = { [key: string]: InputValue };
+
+/** Return types from HealthCore utility functions. */
+type UtilityResult =
+  | Claim[]
+  | Appointment[]
+  | Clinician[]
+  | CMEReport[]
+  | Claim
+  | Clinician
+  | ValidationResult
+  | Record<string, Claim[]>
+  | Record<string, number>
+  | number
+  | string[]
+  | boolean
+  | null;
+
+/** Coerce parsed input to a domain type at the utility runner boundary. */
+function castInput<T>(value: InputValue | undefined): T {
+  return value as unknown as T;
+}
 
 type I18nEntry = {
   ready: string;
@@ -25,8 +72,8 @@ type I18nEntry = {
 
 type FunctionConfig = {
   hint: Record<Lang, string>;
-  template: unknown;
-  run: (input: FunctionRunnerInput) => unknown;
+  template: FunctionRunnerInput;
+  run: (input: FunctionRunnerInput) => UtilityResult;
 };
 
 function requireElement<T extends HTMLElement>(id: string): T {
@@ -92,7 +139,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "claims": [...], "filters": { "payerName": "BlueCross" } }',
     },
     template: { claims: [], filters: { payerName: "BlueCross" } },
-    run: (input) => utils.filterClaims(input.claims as Claim[], input.filters as FilterType),
+    run: (input) => utils.filterClaims(castInput(input.claims), castInput(input.filters)),
   },
   filterAppointmentsByStatus: {
     hint: {
@@ -100,7 +147,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "appointments": [...], "status": ["no_show", "completed"] }',
     },
     template: { appointments: [], status: ["no_show", "completed"] },
-    run: (input) => utils.filterAppointmentsByStatus(input.appointments as Appointment[], input.status as AppointmentStatus[]),
+    run: (input) => utils.filterAppointmentsByStatus(castInput(input.appointments), castInput(input.status)),
   },
   sortClaimsById: {
     hint: {
@@ -108,7 +155,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "claims": [...], "direction": "asc" }',
     },
     template: { claims: [], direction: "asc" },
-    run: (input) => utils.sortClaimsById(input.claims as Claim[], input.direction as "asc" | "desc"),
+    run: (input) => utils.sortClaimsById(castInput(input.claims), castInput(input.direction)),
   },
   sortAppointmentsByDate: {
     hint: {
@@ -116,7 +163,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "appointments": [...], "direction": "asc" }',
     },
     template: { appointments: [], direction: "asc" },
-    run: (input) => utils.sortAppointmentsByDate(input.appointments as Appointment[], input.direction as "asc" | "desc"),
+    run: (input) => utils.sortAppointmentsByDate(castInput(input.appointments), castInput(input.direction)),
   },
   groupClaimsBy: {
     hint: {
@@ -124,7 +171,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "claims": [...], "key": "payerName" }',
     },
     template: { claims: [], key: "payerName" },
-    run: (input) => utils.groupClaimsBy(input.claims as Claim[], input.key as "locationId" | "payerName" | "status" | "serviceType"),
+    run: (input) => utils.groupClaimsBy(castInput(input.claims), castInput(input.key)),
   },
   findClaimById: {
     hint: {
@@ -132,7 +179,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "claims": [...], "claimId": "CLM-000001" }',
     },
     template: { claims: [], claimId: "CLM-000001" },
-    run: (input) => utils.findClaimById(input.claims as Claim[], input.claimId as string),
+    run: (input) => utils.findClaimById(castInput(input.claims), castInput(input.claimId)),
   },
   findClinicianById: {
     hint: {
@@ -140,7 +187,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "clinicians": [...], "clinicianId": "CLN-000001" }',
     },
     template: { clinicians: [], clinicianId: "CLN-000001" },
-    run: (input) => utils.findClinicianById(input.clinicians as Clinician[], input.clinicianId as string),
+    run: (input) => utils.findClinicianById(castInput(input.clinicians), castInput(input.clinicianId)),
   },
   binarySearchClaimById: {
     hint: {
@@ -148,27 +195,27 @@ const functionCatalog: Record<string, FunctionConfig> = {
       es: '{ "sortedClaims": [...], "targetId": "CLM-000001" }',
     },
     template: { sortedClaims: [], targetId: "CLM-000001" },
-    run: (input) => utils.binarySearchClaimById(input.sortedClaims as Claim[], input.targetId as string),
+    run: (input) => utils.binarySearchClaimById(castInput(input.sortedClaims), castInput(input.targetId)),
   },
   calculateDenialRate: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => utils.calculateDenialRate(input.claims as Claim[]),
+    run: (input) => utils.calculateDenialRate(castInput(input.claims)),
   },
   denialRateByPayer: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => utils.denialRateByPayer(input.claims as Claim[]),
+    run: (input) => utils.denialRateByPayer(castInput(input.claims)),
   },
   denialRateByLocation: {
     hint: { en: '{ "claims": [...] }', es: '{ "claims": [...] }' },
     template: { claims: [] },
-    run: (input) => utils.denialRateByLocation(input.claims as Claim[]),
+    run: (input) => utils.denialRateByLocation(castInput(input.claims)),
   },
   flagHighDenialPayers: {
     hint: { en: '{ "claims": [...], "threshold": 8 }', es: '{ "claims": [...], "threshold": 8 }' },
     template: { claims: [], threshold: 8 },
-    run: (input) => utils.flagHighDenialPayers(input.claims as Claim[], input.threshold as number),
+    run: (input) => utils.flagHighDenialPayers(castInput(input.claims), castInput(input.threshold)),
   },
   calculateNoShowCost: {
     hint: {
@@ -196,32 +243,34 @@ const functionCatalog: Record<string, FunctionConfig> = {
       },
       weekEndingDate: "2025-03-11",
     },
-    run: (input) => utils.calculateNoShowCost(input.appointments as Appointment[], input.location as ClinicLocation, input.weekEndingDate as string),
+    run: (input) =>
+      utils.calculateNoShowCost(castInput(input.appointments), castInput(input.location), castInput(input.weekEndingDate)),
   },
   noShowRateByLocation: {
     hint: { en: '{ "appointments": [...] }', es: '{ "appointments": [...] }' },
     template: { appointments: [] },
-    run: (input) => utils.noShowRateByLocation(input.appointments as Appointment[]),
+    run: (input) => utils.noShowRateByLocation(castInput(input.appointments)),
   },
   flagHighNoShowLocations: {
     hint: { en: '{ "appointments": [...], "threshold": 20 }', es: '{ "appointments": [...], "threshold": 20 }' },
     template: { appointments: [], threshold: 20 },
-    run: (input) => utils.flagHighNoShowLocations(input.appointments as Appointment[], input.threshold as number),
+    run: (input) => utils.flagHighNoShowLocations(castInput(input.appointments), castInput(input.threshold)),
   },
   generateCMEReport: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30" }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30" }' },
     template: { clinicians: [], asOfDate: "2025-06-30" },
-    run: (input) => utils.generateCMEReport(input.clinicians as Clinician[], input.asOfDate as string),
+    run: (input) => utils.generateCMEReport(castInput(input.clinicians), castInput(input.asOfDate)),
   },
   getCliniciansAtRisk: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30" }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30" }' },
     template: { clinicians: [], asOfDate: "2025-06-30" },
-    run: (input) => utils.getCliniciansAtRisk(input.clinicians as Clinician[], input.asOfDate as string),
+    run: (input) => utils.getCliniciansAtRisk(castInput(input.clinicians), castInput(input.asOfDate)),
   },
   getCliniciansWithExpiringLicences: {
     hint: { en: '{ "clinicians": [...], "asOfDate": "2025-06-30", "daysThreshold": 45 }', es: '{ "clinicians": [...], "asOfDate": "2025-06-30", "daysThreshold": 45 }' },
     template: { clinicians: [], asOfDate: "2025-06-30", daysThreshold: 45 },
-    run: (input) => utils.getCliniciansWithExpiringLicences(input.clinicians as Clinician[], input.asOfDate as string, input.daysThreshold as number),
+    run: (input) =>
+      utils.getCliniciansWithExpiringLicences(castInput(input.clinicians), castInput(input.asOfDate), castInput(input.daysThreshold)),
   },
   validateClaim: {
     hint: { en: '{ "claim": {...}, "knownLocationIds": ["us-tx-001", "us-fl-001"] }', es: '{ "claim": {...}, "knownLocationIds": ["us-tx-001", "us-fl-001"] }' },
@@ -240,7 +289,7 @@ const functionCatalog: Record<string, FunctionConfig> = {
       },
       knownLocationIds: ["us-tx-001", "us-fl-001"],
     },
-    run: (input) => utils.validateClaim(input.claim as Claim, input.knownLocationIds as string[]),
+    run: (input) => utils.validateClaim(castInput(input.claim), castInput(input.knownLocationIds)),
   },
   validateClinician: {
     hint: { en: '{ "clinician": {...} }', es: '{ "clinician": {...} }' },
@@ -258,21 +307,21 @@ const functionCatalog: Record<string, FunctionConfig> = {
         cmeYearStartDate: "2025-01-01",
       },
     },
-    run: (input) => utils.validateClinician(input.clinician as Clinician),
+    run: (input) => utils.validateClinician(castInput(input.clinician)),
   },
   isDenialRateAboveThreshold: {
     hint: { en: '{ "rate": 9.2, "threshold": 8 }', es: '{ "rate": 9.2, "threshold": 8 }' },
     template: { rate: 9.2, threshold: 8 },
-    run: (input) => utils.isDenialRateAboveThreshold(input.rate as number, input.threshold as number),
+    run: (input) => utils.isDenialRateAboveThreshold(castInput(input.rate), castInput(input.threshold)),
   },
   isNoShowRateAboveThreshold: {
     hint: { en: '{ "rate": 21, "threshold": 20 }', es: '{ "rate": 21, "threshold": 20 }' },
     template: { rate: 21, threshold: 20 },
-    run: (input) => utils.isNoShowRateAboveThreshold(input.rate as number, input.threshold as number),
+    run: (input) => utils.isNoShowRateAboveThreshold(castInput(input.rate), castInput(input.threshold)),
   },
 };
 
-const fixtureTemplates: Record<string, unknown> = {
+const fixtureTemplates: Record<string, FunctionRunnerInput> = {
   filterClaims: {
     claims: clone(claims),
     filters: { payerName: "BlueCross" },
@@ -374,7 +423,7 @@ function t(key: keyof I18nEntry): string {
   return i18n[getCurrentLang()][key];
 }
 
-function stringifyResult(value: unknown): string {
+function stringifyResult(value: UtilityResult): string {
   if (value === undefined) return "undefined";
   if (typeof value === "string") return value;
   try {
@@ -384,12 +433,10 @@ function stringifyResult(value: unknown): string {
   }
 }
 
-function parseScalar(raw: string): unknown {
+function parseScalar(raw: string): string | boolean | null | undefined | number {
   const value = raw.trim();
   if (value === "") return "";
-  if (value === "true") return true;
-  if (value === "false") return false;
-  if (value === "null") return null;
+  if (value === "true" || value === "false" || value === "null") return JSON.parse(value);
   if (value === "undefined") return undefined;
   if (!Number.isNaN(Number(value)) && /^-?\d+(\.\d+)?$/.test(value)) return Number(value);
   const quoted = value.match(/^(?:["'])(.*)(?:["'])$/);
@@ -431,7 +478,7 @@ function stripTrailingCommas(text: string): string {
   return text.replace(/,\s*([}\]])/g, "$1");
 }
 
-function parseJsonLike(text: string): unknown {
+function parseJsonLike(text: string): ParsedValue {
   try {
     return JSON.parse(text);
   } catch (jsonError) {
@@ -441,7 +488,7 @@ function parseJsonLike(text: string): unknown {
   }
 }
 
-function parseMaybeStructuredValue(raw: string): unknown {
+function parseMaybeStructuredValue(raw: string): ParsedValue {
   const trimmed = raw.trim();
   if (!trimmed) return "";
   if (/^[\[{]/.test(trimmed)) {
@@ -461,11 +508,11 @@ function toCamelCase(value: string): string {
     .replace(/[_-]+([a-zA-Z0-9])/g, (_, char: string) => char.toUpperCase());
 }
 
-function normalizeRecordKeys(record: Record<string, unknown>): DelimitedRow {
+function normalizeRecordKeys(record: DelimitedRow): DelimitedRow {
   return Object.fromEntries(Object.entries(record).map(([key, value]) => [toCamelCase(String(key)), value]));
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+function isPlainObject(value: ParsedValue): value is DelimitedRow {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
@@ -485,7 +532,7 @@ function parseCsv(text: string, delimiter: string): DelimitedRow[] {
       throw new Error("CSV rows must have the same number of columns as the header.");
     }
 
-    const row: Record<string, unknown> = {};
+    const row: DelimitedRow = {};
     headers.forEach((header, index) => {
       row[header] = parseMaybeStructuredValue(values[index] ?? "");
     });
@@ -493,12 +540,12 @@ function parseCsv(text: string, delimiter: string): DelimitedRow[] {
   });
 }
 
-function normalizeDateValue(value: unknown): unknown {
+function normalizeDateValue(value: ParsedValue): ParsedValue {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
   return value;
 }
 
-function sanitizeParsedInput(value: unknown): unknown {
+function sanitizeParsedInput(value: ParsedValue): ParsedValue {
   const normalized = normalizeDateValue(value);
   if (Array.isArray(normalized)) return normalized.map((item) => sanitizeParsedInput(item));
   if (isPlainObject(normalized)) {
@@ -507,7 +554,7 @@ function sanitizeParsedInput(value: unknown): unknown {
   return normalized;
 }
 
-function firstNonEmpty(rows: DelimitedRow[], key: string): unknown {
+function firstNonEmpty(rows: DelimitedRow[], key: string): ParsedValue | undefined {
   for (const row of rows) {
     const value = row[key];
     if (value === undefined || value === null) continue;
@@ -517,12 +564,12 @@ function firstNonEmpty(rows: DelimitedRow[], key: string): unknown {
   return undefined;
 }
 
-function toNumberOrFallback(value: unknown, fallback: number): number {
+function toNumberOrFallback(value: ParsedValue | undefined, fallback: number): number {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
-function splitListValue(value: unknown): string[] {
+function splitListValue(value: ParsedValue | undefined): string[] {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value !== "string") return [];
   return value.split(/[|,;]/).map((item) => item.trim()).filter(Boolean);
@@ -656,10 +703,10 @@ function normalizeTableInput(functionName: string, rows: DelimitedRow[]): Functi
   }
 }
 
-async function parseYaml(text: string): Promise<unknown> {
+async function parseYaml(text: string): Promise<ParsedValue> {
   const yamlModuleUrl = "https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm";
   const module = await import(yamlModuleUrl);
-  return (module as { load: (input: string) => unknown }).load(text);
+  return (module as { load: (input: string) => ParsedValue }).load(text);
 }
 
 function inferFormat(fileName: string): DataFormat {
@@ -685,7 +732,7 @@ function looksLikeDelimitedText(text: string, delimiter: string): boolean {
   }
 }
 
-async function parseByFormat(rawText: string, format: DataFormat): Promise<unknown> {
+async function parseByFormat(rawText: string, format: DataFormat): Promise<ParsedValue> {
   const text = rawText.trim();
   if (!text) return null;
 
@@ -741,7 +788,7 @@ function updateHint(): void {
   hintBox.textContent = `${t("hintPrefix")} ${selected.hint[getCurrentLang()]}${csvHint}`;
 }
 
-async function getInputPayload(): Promise<unknown> {
+async function getInputPayload(): Promise<ParsedValue> {
   const selectedFile = fileInput.files?.[0] ?? null;
   const selectedFormat = formatSelect.value as DataFormat;
 
@@ -757,9 +804,9 @@ async function getInputPayload(): Promise<unknown> {
   return sanitizeParsedInput(await parseByFormat(inlineText, selectedFormat));
 }
 
-function normalizeInputForFunction(functionName: string, rawInput: unknown): FunctionRunnerInput {
+function normalizeInputForFunction(functionName: string, rawInput: ParsedValue): FunctionRunnerInput {
   if (Array.isArray(rawInput)) return normalizeTableInput(functionName, rawInput as DelimitedRow[]);
-  if (rawInput && typeof rawInput === "object") return rawInput as FunctionRunnerInput;
+  if (isPlainObject(rawInput)) return rawInput;
   return { input: rawInput };
 }
 
