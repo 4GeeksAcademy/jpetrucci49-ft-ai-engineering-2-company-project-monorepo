@@ -384,12 +384,10 @@ function stringifyResult(value: unknown): string {
   }
 }
 
-function parseScalar(raw: string): unknown {
+function parseScalar(raw: string): string | boolean | null | undefined | number {
   const value = raw.trim();
   if (value === "") return "";
-  if (value === "true") return true;
-  if (value === "false") return false;
-  if (value === "null") return null;
+  if (value === "true" || value === "false" || value === "null") return JSON.parse(value);
   if (value === "undefined") return undefined;
   if (!Number.isNaN(Number(value)) && /^-?\d+(\.\d+)?$/.test(value)) return Number(value);
   const quoted = value.match(/^(?:["'])(.*)(?:["'])$/);
@@ -431,7 +429,7 @@ function stripTrailingCommas(text: string): string {
   return text.replace(/,\s*([}\]])/g, "$1");
 }
 
-function parseJsonLike(text: string): unknown {
+function parseJsonLike(text: string): string | boolean | null | undefined | number {
   try {
     return JSON.parse(text);
   } catch (jsonError) {
@@ -441,12 +439,12 @@ function parseJsonLike(text: string): unknown {
   }
 }
 
-function parseMaybeStructuredValue(raw: string): unknown {
+function parseMaybeStructuredValue(raw: string): string | boolean | null | undefined | number {
   const trimmed = raw.trim();
   if (!trimmed) return "";
   if (/^[\[{]/.test(trimmed)) {
     try {
-      return parseJsonLike(trimmed);
+      return parseJsonLike(trimmed) as string | boolean | null | undefined | number;
     } catch {
       return parseScalar(raw);
     }
