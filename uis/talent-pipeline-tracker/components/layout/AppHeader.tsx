@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useFilterReset } from "@/components/layout/FilterResetProvider";
 
 export function AppHeader() {
+  const { clearAllFilters } = useFilterReset();
+
+  const handleAllCandidatesClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    clearAllFilters();
+  };
+
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
@@ -11,6 +21,7 @@ export function AppHeader() {
         </div>
         <Link
           href="/"
+          onClick={handleAllCandidatesClick}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           All candidates

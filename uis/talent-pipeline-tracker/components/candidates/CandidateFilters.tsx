@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { statusOptions, stageOptions } from "@/lib/labels";
 import { Field, SelectInput, TextInput } from "@/components/ui/Field";
 
@@ -18,6 +18,12 @@ interface CandidateFiltersProps {
 export function CandidateFilters({ values, onChange }: CandidateFiltersProps) {
   const [searchDraft, setSearchDraft] = useState(values.search);
   const searchTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchDraft(value);
