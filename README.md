@@ -7,6 +7,7 @@ HealthCore project workspace containing:
 - TypeScript utility modules in `src/utils`
 - Unit tests and fixtures in `tests/utils`
 - Manual utility function tester UI (`utility-test.html`)
+- Talent Pipeline Tracker UI (`uis/talent-pipeline-tracker`)
 
 ## Quick Start
 
@@ -30,6 +31,35 @@ npm run start
 ```
 
 Default local URL: `http://localhost:4173`
+
+## Talent Pipeline Tracker
+
+The Executive Assistant recruitment pipeline UI lives in `uis/talent-pipeline-tracker`. It is a separate Next.js app and runs independently from the static site above.
+
+1. Go to the app directory:
+
+```bash
+cd uis/talent-pipeline-tracker
+```
+
+2. Configure the API URL:
+
+```bash
+cp .env.example .env.local
+```
+
+Set `NEXT_PUBLIC_API_URL` in `.env.local` (default: `https://playground.4geeks.com/tracker/api/v1`).
+
+3. Install dependencies and start the dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Default local URL: `http://localhost:3000`
+
+See `uis/talent-pipeline-tracker/README.md` for app-specific details.
 
 ## Development Workflow
 
@@ -109,6 +139,7 @@ Deploy the repository root as static files, including generated assets:
 - `tests/`: Vitest test suites and fixtures
 - `assets/`: Built frontend assets and static resources
 - `styles/`: Tailwind source stylesheet
+- `uis/talent-pipeline-tracker/`: Next.js app for the recruitment pipeline tracker
 
 ## Language Support
 
