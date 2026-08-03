@@ -30,6 +30,14 @@ _Last updated: Milestone 4 finalized — static migration complete_
 
 ## In progress
 
+### Milestone 5 — Incident report analysis (Phase 1)
+
+- [x] Python environment via uv (`pyproject.toml`, `uv.lock`)
+- [ ] `scripts/analyze.py` — CSV validation, console report, optional CSV export
+- [ ] Phase 2 (TBD)
+
+## Previously in progress
+
 - [ ] Live API integrations for backoffice (future milestone)
 
 ## Planned next
