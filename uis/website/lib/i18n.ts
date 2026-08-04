@@ -1,3 +1,5 @@
+import { crossAppNav } from "@healthcore/navigation";
+
 export type Lang = "en" | "es";
 
 export const translations = {
@@ -16,8 +18,8 @@ export const translations = {
       services: "Services",
       locations: "Locations",
       contact: "Contact",
-      utilities: "Utilities",
-      tracker: "Talent pipeline",
+      utilities: crossAppNav.labels.en.utilities,
+      tracker: crossAppNav.labels.en.talentPipeline,
       menu: "Menu",
       closeMenu: "Close",
     },
@@ -169,8 +171,8 @@ export const translations = {
       services: "Servicios",
       locations: "Ubicaciones",
       contact: "Contacto",
-      utilities: "Utilidades",
-      tracker: "Pipeline de talento",
+      utilities: crossAppNav.labels.es.utilities,
+      tracker: crossAppNav.labels.es.talentPipeline,
       menu: "Menu",
       closeMenu: "Cerrar",
     },

@@ -1,4 +1,4 @@
-# HealthCore Operations Backoffice
+# HealthCore Operations
 
 Internal HealthCore Digital dashboard surfacing Milestone 2 operational reporting utilities and Milestone 5 patient incident analysis.
 

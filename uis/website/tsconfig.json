@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@healthcore/navigation": ["../../packages/shared/navigation/index.ts"]
     }
   },
   "include": [

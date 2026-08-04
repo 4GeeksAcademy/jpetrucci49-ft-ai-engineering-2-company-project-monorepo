@@ -2,7 +2,7 @@
 
 HealthCore project workspace containing:
 
-- **Next.js applications** under `uis/` (public website, operations backoffice, talent pipeline tracker)
+- **Next.js applications** under `uis/` (public website, operations, talent pipeline tracker)
 - TypeScript business logic in `src/utils`
 - Agent infrastructure (`memory-bank/`, `AGENTS.md`, `.agents/`, `skills/`)
 - Vitest unit tests in `tests/utils`
@@ -22,7 +22,7 @@ This starts every frontend concurrently:
 | --- | --- | --- |
 | Application hub | http://localhost:4173 | Links to all apps |
 | Public website | http://localhost:3000 | Bilingual corporate site + patient enquiry |
-| Operations backoffice | http://localhost:3001 | Billing, clinical, CME dashboards |
+| Operations | http://localhost:3001 | Billing, clinical, CME dashboards |
 | Utility tester | http://localhost:3001/utilities | M2 function manual runner |
 | Talent pipeline tracker | http://localhost:3002 | Recruitment pipeline (M3) |
 

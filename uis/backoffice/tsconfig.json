@@ -16,6 +16,7 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./*"],
+      "@healthcore/navigation": ["../../packages/shared/navigation/index.ts"],
       "@healthcore/utils": ["../../src/utils/index.ts"],
       "@healthcore/utils/*": ["../../src/utils/*"],
       "@healthcore/fixtures": ["../../tests/utils/fixtures.ts"],
