@@ -2,6 +2,17 @@
 
 import Link from "next/link";
 import { useFilterReset } from "@/components/layout/FilterResetProvider";
+import {
+  appUrls,
+  backofficeUtilitiesUrl,
+  crossAppNav,
+  crossAppNavLabels,
+} from "@healthcore/navigation";
+
+const crossAppLinks = [
+  { href: appUrls.website, label: crossAppNavLabels.publicSite },
+  { href: backofficeUtilitiesUrl(appUrls.backoffice), label: crossAppNavLabels.utilities },
+] as const;
 
 export function AppHeader() {
   const { clearAllFilters } = useFilterReset();
@@ -13,19 +24,34 @@ export function AppHeader() {
 
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">HealthCore Digital</p>
-          <h1 className="text-lg font-semibold text-slate-900">People &amp; Talent — Pipeline Tracker</h1>
+          <h1 className="text-lg font-semibold text-slate-900">{crossAppNav.appTitles.tracker}</h1>
           <p className="text-sm text-slate-600">Executive Assistant search · Austin headquarters</p>
         </div>
-        <Link
-          href="/"
-          onClick={handleAllCandidatesClick}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <nav
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm"
+          aria-label="Pipeline tracker navigation"
         >
-          All candidates
-        </Link>
+          <Link
+            href="/"
+            onClick={handleAllCandidatesClick}
+            className="font-medium text-slate-700 hover:text-teal-700 hover:underline"
+          >
+            All candidates
+          </Link>
+          <span className="hidden h-4 w-px bg-slate-300 sm:inline" aria-hidden="true" />
+          {crossAppLinks.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="text-slate-600 hover:text-teal-700 hover:underline"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
       </div>
     </header>
   );

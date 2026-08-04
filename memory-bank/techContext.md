@@ -12,6 +12,7 @@
 ├── milestones/           # Programme requirements (read-only unless approved)
 ├── src/                  # M2 TypeScript utilities and types
 ├── scripts/              # Python helper scripts (M5 incident analysis)
+├── services/api/         # FastAPI internal API (M5 incident analysis)
 ├── pyproject.toml        # Python dependencies (uv)
 ├── uv.lock               # Locked Python dependency versions
 ├── tests/utils/          # Vitest suites and shared fixtures
@@ -28,6 +29,7 @@
 | --- | --- |
 | Root / M2 | TypeScript, Vitest, `concurrently`, `src/utility-registry.ts` |
 | `scripts/` (M5) | Python 3.12+, [uv](https://docs.astral.sh/uv/), pandas |
+| `services/api/` (M5) | Python 3.12+, FastAPI, uvicorn, pandas |
 | All `uis/*` | Next.js 16, React 19, Tailwind CSS v4 |
 
 ## Architectural decisions
@@ -37,6 +39,7 @@
 3. **Client-side fetching when URL state matters** — e.g. talent tracker filters use `useSearchParams` + client refetch so list and query string stay in sync.
 4. **Human-readable labels in UI** — map raw API/domain values to labels (status/stage in M3; compliance status in CME reports).
 5. **No external state libraries** in Next.js apps — React hooks only.
+6. **M5 incident analysis** — business rules in `services/api/app/incidents/analysis.py`; backoffice proxies via `app/api/incidents/` route handlers; client uses same-origin `/api/incidents/*`.
 
 ## Technical constraints
 
@@ -60,7 +63,10 @@ npm run lint:apps
 # Python scripts (M5)
 uv sync
 uv run python scripts/analyze.py data/raw/incidents.csv
-uv add <package>     # add a Python dependency
+
+# HealthCore API (M5)
+cd services/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
+npm run dev:api
 ```
 
 ## Path aliases (backoffice)

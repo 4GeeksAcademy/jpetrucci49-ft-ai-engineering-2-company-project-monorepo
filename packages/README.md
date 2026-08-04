@@ -7,4 +7,8 @@ Each subfolder under `packages/` should represent **one versionable package** (f
 - **Main purpose**: encourage reuse and consistency across all company deliverables.
 - **Recommendation**: document packages as you add them—their public API and how they are consumed from `apps/`, `agents/`, and `workflows/`.
 
+| Package | Import alias | Purpose |
+| --- | --- | --- |
+| `shared/navigation/` | `@healthcore/navigation` | Cross-app nav labels (EN/ES), paths, and URL helpers |
+
 > _Spanish version: [README.es.md](./README.es.md)._

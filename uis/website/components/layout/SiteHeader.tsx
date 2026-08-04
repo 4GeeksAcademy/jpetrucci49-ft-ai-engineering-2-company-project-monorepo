@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
-import { appUrls } from "@/lib/app-urls";
+import { appUrls, backofficeUtilitiesUrl } from "@healthcore/navigation";
 
 export function SiteHeader() {
   const { lang, setLang, t } = useLanguage();
@@ -12,7 +12,7 @@ export function SiteHeader() {
   const navLinks: { href: string; label: string; external?: boolean }[] = [
     { href: "/", label: t.nav.home },
     { href: "/application", label: t.nav.application },
-    { href: `${appUrls.backoffice}/utilities`, label: t.nav.utilities, external: true },
+    { href: backofficeUtilitiesUrl(appUrls.backoffice), label: t.nav.utilities, external: true },
     { href: appUrls.tracker, label: t.nav.tracker, external: true },
   ];
 

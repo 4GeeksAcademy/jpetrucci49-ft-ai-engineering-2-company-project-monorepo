@@ -1,0 +1,14 @@
+[project]
+name = "healthcore-api"
+version = "0.1.0"
+description = "HealthCore internal API — incident analysis and operations"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "pandas>=3.0.5",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[tool.uv]
+package = false

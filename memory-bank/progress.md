@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 4 finalized — static migration complete_
+_Last updated: Milestone 5 Phase 2 — incident analysis platform integration_
 
 ## Completed
 
@@ -28,17 +28,23 @@ _Last updated: Milestone 4 finalized — static migration complete_
 - [x] Root `npm run dev` serves all apps concurrently
 - [x] Dev hub at `public/index.html` (port 4173)
 
-## In progress
+### Milestone 5 — Incident report analysis
 
-### Milestone 5 — Incident report analysis (Phase 1)
+**Phase 1**
 
 - [x] Python environment via uv (`pyproject.toml`, `uv.lock`)
-- [ ] `scripts/analyze.py` — CSV validation, console report, optional CSV export
-- [ ] Phase 2 (TBD)
+- [x] `scripts/analyze.py` — CSV validation, console report, optional CSV export
 
-## Previously in progress
+**Phase 2**
 
-- [ ] Live API integrations for backoffice (future milestone)
+- [x] Shared analysis module at `services/api/app/incidents/analysis.py`
+- [x] FastAPI service — `POST /api/incidents/analyze`, `GET /api/incidents/results/export`
+- [x] Backoffice `/incidents` page — upload, summary, CSV download
+- [x] Root `npm run dev:api`; CLI refactored to import shared module
+
+## In progress
+
+- [ ] Live API integrations for backoffice operations dashboard (future milestone)
 
 ## Planned next
 
