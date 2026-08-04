@@ -76,9 +76,9 @@ Browser → backoffice :3001 /api/incidents/*
 
 ```bash
 curl -X POST http://localhost:8000/api/incidents/analyze \
-  -F "file=@../../data/raw/incidents.csv"
+  -F "file=@../../scripts/incidents.csv"
 
 curl -OJ http://localhost:8000/api/incidents/results/export
 ```
 
-Expected totals for `data/raw/incidents.csv`: 100 total, 94 valid, 6 invalid, average satisfaction 3.58.
+Expected totals for `scripts/incidents.csv`: 100 total, 94 valid, 6 invalid, average satisfaction 3.58.

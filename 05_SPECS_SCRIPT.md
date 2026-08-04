@@ -19,12 +19,12 @@ Before implementing anything, read:
 | File | Use |
 | --- | --- |
 | `context/05_CONTEXT.md` | CSV schema, validation rules, expected output, compliance requirements |
-| `data/raw/incidents.csv` | Test dataset (100 data rows + header) used for verification |
+| `scripts/incidents.csv` | Test dataset (100 data rows + header) used for verification |
 
 Stakeholder constraints from the context:
 
 - **HIPAA / UK GDPR:** `patient_id` is protected health information. It must **never** appear in console output, logs, error messages, or CSV export — only aggregate rule-violation counts (e.g. "Missing patient_id: 1 record").
-- **Accuracy:** Numeric values in required sections must match the expected values in §6 exactly when run against `data/raw/incidents.csv`.
+- **Accuracy:** Numeric values in required sections must match the expected values in §6 exactly when run against `scripts/incidents.csv`.
 - **Optional extension:** A breakdown by country (`US` / `UK`) on valid records is recommended for stakeholders but **not required** for a passing submission.
 
 ---
@@ -58,7 +58,7 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if it is n
 The script must be runnable as:
 
 ```bash
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 ```
 
 Requirements:
@@ -311,7 +311,7 @@ Logic may be organised internally as functions, e.g.:
 
 ```bash
 uv sync
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 ```
 
 Compare all required numeric output against §6. Re-run after changes until every value matches.
@@ -328,7 +328,7 @@ Compare all required numeric output against §6. Re-run after changes until ever
 
 ### Script & CLI
 
-- [ ] Create the main script (`scripts/analyze.py`) that accepts the path to the CSV as a command-line argument: `uv run python scripts/analyze.py data/raw/incidents.csv`.
+- [ ] Create the main script (`scripts/analyze.py`) that accepts the path to the CSV as a command-line argument: `uv run python scripts/analyze.py scripts/incidents.csv`.
 - [ ] The script loads and reads the file (pandas recommended; standard-library `csv` acceptable).
 
 ### Validation
@@ -347,11 +347,11 @@ Compare all required numeric output against §6. Re-run after changes until ever
 
 - [ ] Print the summary to the console in a readable format: separators, clear labels, and alignment.
 - [ ] At the end of execution, ask the user: `Export results to CSV? [y / n]`. If they choose `y`, save the results to `results.csv` (one row per metric).
-- [ ] Verify that the results match exactly the expected values in §6 when run against `data/raw/incidents.csv`.
+- [ ] Verify that the results match exactly the expected values in §6 when run against `scripts/incidents.csv`.
 
 ---
 
-## 6. Expected Results — `data/raw/incidents.csv`
+## 6. Expected Results — `scripts/incidents.csv`
 
 When the script runs correctly against the provided test file, required sections must produce **exactly** these values:
 
@@ -423,7 +423,7 @@ When the script runs correctly against the provided test file, required sections
 - Web UI or dashboard integration (`uis/backoffice` incident views)
 - Database persistence or API endpoints
 - Automated tests (optional unless added in a later phase)
-- Processing the full 1,000-row production archive (use `data/raw/incidents.csv` for development and grading)
+- Processing the full 1,000-row production archive (use `scripts/incidents.csv` for development and grading)
 - Sending data to external AI services or third-party analytics
 
 ---
@@ -431,7 +431,7 @@ When the script runs correctly against the provided test file, required sections
 ## 8. References
 
 - `context/05_CONTEXT.md` — authoritative schema, rules, sample output, stakeholder notes
-- `data/raw/incidents.csv` — verification dataset
+- `scripts/incidents.csv` — verification dataset
 - `pyproject.toml` / `uv.lock` — Python dependency manifest (uv)
 - `scripts/README.md` — scripts folder conventions
 - `04_SPECS.md` — prior milestone spec format reference

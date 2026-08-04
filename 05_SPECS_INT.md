@@ -13,7 +13,7 @@ Once the CLI script logic is validated, **extract that same logic into reusable 
 1. **Backend** — `services/api/` exposes REST endpoints to upload a CSV, run analysis, and export the last result.
 2. **Frontend** — `uis/backoffice/` adds an incident analysis page where staff upload a file, review the summary, and download results.
 
-The API and UI must produce **the same numeric results** as `scripts/analyze.py` when run against `data/raw/incidents.csv`. No patient identifiers or row-level PHI may appear in API responses, logs, or exports.
+The API and UI must produce **the same numeric results** as `scripts/analyze.py` when run against `scripts/incidents.csv`. No patient identifiers or row-level PHI may appear in API responses, logs, or exports.
 
 ---
 
@@ -24,7 +24,7 @@ The API and UI must produce **the same numeric results** as `scripts/analyze.py`
 | `context/05_CONTEXT.md` | CSV schema, validation rules, stakeholder notes, compliance requirements |
 | `05_SPECS_SCRIPT.md` | Phase 1 behaviour, expected metrics (§6), export format |
 | `scripts/analyze.py` | Reference implementation to extract — do not duplicate business rules in TypeScript |
-| `data/raw/incidents.csv` | Verification dataset (100 data rows) |
+| `scripts/incidents.csv` | Verification dataset (100 data rows) |
 | `docs/ARCHITECTURE_PROPOSAL.md` | FastAPI layered structure guidance (adapt paths to `services/api/`) |
 
 **Compliance (non-negotiable):** HIPAA / UK GDPR — `patient_id` and free-text `description` must never appear in JSON responses, error messages, server logs, or CSV exports. Report invalid-record **counts by rule type** only.
@@ -206,7 +206,7 @@ Use Pydantic models in `schemas.py`. Illustrative shape:
 }
 ```
 
-Percentages: one decimal place. Average score: two decimal places. Numeric values must match Phase 1 §6 when tested with `data/raw/incidents.csv`.
+Percentages: one decimal place. Average score: two decimal places. Numeric values must match Phase 1 §6 when tested with `scripts/incidents.csv`.
 
 ### 5.4 Error response format
 
@@ -339,7 +339,7 @@ add root `npm run dev:api` script to run API alongside existing `npm run dev` ap
 
 1. Start API and backoffice.
 2. Open `http://localhost:3001/incidents`.
-3. Upload `data/raw/incidents.csv`.
+3. Upload `scripts/incidents.csv`.
 4. Verify on-screen values match `05_SPECS_SCRIPT.md` §6 (100 total, 94 valid, 6 invalid, avg 3.58, etc.).
 5. Click download — confirm `results.csv` matches Phase 1 export format.
 6. Restart API — confirm export returns 404 until a new file is uploaded.
@@ -351,7 +351,7 @@ add root `npm run dev:api` script to run API alongside existing `npm run dev` ap
 After refactor, re-run:
 
 ```bash
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 ```
 
 All Phase 1 numeric output must still match §6.
@@ -416,7 +416,7 @@ All Phase 1 numeric output must still match §6.
 ### Compliance & accuracy
 
 - [ ] No `patient_id` or row-level PHI in API JSON, CSV export, UI, or server logs.
-- [ ] Uploading `data/raw/incidents.csv` produces numeric results matching `05_SPECS_SCRIPT.md` §6.
+- [ ] Uploading `scripts/incidents.csv` produces numeric results matching `05_SPECS_SCRIPT.md` §6.
 
 ### Quality
 

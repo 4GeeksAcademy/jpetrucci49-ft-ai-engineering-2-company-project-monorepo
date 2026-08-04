@@ -27,7 +27,7 @@ uv sync
 ### Running a script
 
 ```bash
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 ```
 
 ### Adding a dependency

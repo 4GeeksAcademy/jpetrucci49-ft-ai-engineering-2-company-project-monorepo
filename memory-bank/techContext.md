@@ -62,7 +62,7 @@ npm run lint:apps
 
 # Python scripts (M5)
 uv sync
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 
 # HealthCore API (M5)
 cd services/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
