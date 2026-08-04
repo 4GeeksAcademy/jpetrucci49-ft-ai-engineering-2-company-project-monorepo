@@ -1,12 +1,7 @@
 import { AnalysisResult, IncidentsApiError } from "@/types/incidents";
 
-function getBaseUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!baseUrl) {
-    throw new IncidentsApiError("NEXT_PUBLIC_API_URL is not configured.", 0);
-  }
-  return baseUrl.replace(/\/$/, "");
-}
+/** Same-origin BFF routes — proxied server-side to FastAPI (see app/api/incidents/). */
+const API_PREFIX = "/api/incidents";
 
 async function parseErrorMessage(response: Response): Promise<string> {
   try {
@@ -26,7 +21,7 @@ export async function analyzeIncidents(file: File): Promise<AnalysisResult> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${getBaseUrl()}/api/incidents/analyze`, {
+  const response = await fetch(`${API_PREFIX}/analyze`, {
     method: "POST",
     body: formData,
   });
@@ -40,7 +35,7 @@ export async function analyzeIncidents(file: File): Promise<AnalysisResult> {
 }
 
 export async function exportIncidentResults(): Promise<Blob> {
-  const response = await fetch(`${getBaseUrl()}/api/incidents/results/export`);
+  const response = await fetch(`${API_PREFIX}/results/export`);
 
   if (!response.ok) {
     const message = await parseErrorMessage(response);

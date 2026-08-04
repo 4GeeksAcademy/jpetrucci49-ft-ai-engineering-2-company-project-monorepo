@@ -39,6 +39,7 @@
 3. **Client-side fetching when URL state matters** — e.g. talent tracker filters use `useSearchParams` + client refetch so list and query string stay in sync.
 4. **Human-readable labels in UI** — map raw API/domain values to labels (status/stage in M3; compliance status in CME reports).
 5. **No external state libraries** in Next.js apps — React hooks only.
+6. **M5 incident analysis** — business rules in `services/api/app/incidents/analysis.py`; backoffice proxies via `app/api/incidents/` route handlers; client uses same-origin `/api/incidents/*`.
 
 ## Technical constraints
 

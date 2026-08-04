@@ -59,7 +59,18 @@ The last successful analysis is held **in memory** for the current API process. 
 
 ## CORS
 
-Set `CORS_ORIGINS` (comma-separated) for allowed browser origins. Default: `http://localhost:3001` (backoffice dev server).
+Set `CORS_ORIGINS` (comma-separated) for direct browser access to FastAPI. The backoffice normally proxies via Next.js route handlers (`uis/backoffice/app/api/incidents/`), so CORS is not required for the standard upload flow.
+
+Defaults allow `localhost:3001` and Codespaces URLs (`*.github.dev`). See `.env.example`.
+
+## Architecture note
+
+```
+Browser → backoffice :3001 /api/incidents/*
+       → Next.js route handler (server-side)
+       → FastAPI :8000 /api/incidents/*
+       → app/incidents/analysis.py (shared with scripts/analyze.py)
+```
 
 ## Manual test
 

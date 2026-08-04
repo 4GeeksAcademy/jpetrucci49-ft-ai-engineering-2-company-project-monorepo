@@ -48,7 +48,7 @@ export function IncidentFileUpload({ onFileSelected, disabled = false }: Inciden
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,text/csv,application/vnd.ms-excel,application/csv"
+        accept=".csv,text/csv"
         className="sr-only"
         disabled={disabled}
         onChange={(event) => handleFile(event.target.files?.[0])}

@@ -5,8 +5,14 @@ import { useState } from "react";
 import { IncidentFileUpload } from "@/components/incidents/IncidentFileUpload";
 import { IncidentResultsSummary } from "@/components/incidents/IncidentResultsSummary";
 import { analyzeIncidents, downloadBlob, exportIncidentResults } from "@/lib/api/incidents";
-import type { AnalysisResult } from "@/types/incidents";
-import { IncidentsApiError } from "@/types/incidents";
+import { IncidentsApiError, type AnalysisResult } from "@/types/incidents";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof IncidentsApiError || error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}
 
 export function IncidentAnalysisPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -25,41 +31,7 @@ export function IncidentAnalysisPage() {
       setResult(analysis);
     } catch (error) {
       setResult(null);
-      if (error instanceof IncidentsApiError) {
-        setUploadError(error.message);
-      } else if (error instanceof Error) {
-        setUploadError(error.message);
-      } else {
-        setUploadError("Unable to analyze the uploaded file.");
-      }
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  async function handleLoadSample() {
-    setIsUploading(true);
-    setUploadError(null);
-    setDownloadError(null);
-
-    try {
-      const response = await fetch("/samples/incidents.csv");
-      if (!response.ok) {
-        throw new Error("Sample file is not available.");
-      }
-      const blob = await response.blob();
-      const file = new File([blob], "incidents.csv", { type: "text/csv" });
-      const analysis = await analyzeIncidents(file);
-      setResult(analysis);
-    } catch (error) {
-      setResult(null);
-      if (error instanceof IncidentsApiError) {
-        setUploadError(error.message);
-      } else if (error instanceof Error) {
-        setUploadError(error.message);
-      } else {
-        setUploadError("Unable to load the sample file.");
-      }
+      setUploadError(getErrorMessage(error, "Unable to analyze the uploaded file."));
     } finally {
       setIsUploading(false);
     }
@@ -78,13 +50,7 @@ export function IncidentAnalysisPage() {
       const blob = await exportIncidentResults();
       downloadBlob(blob, "results.csv");
     } catch (error) {
-      if (error instanceof IncidentsApiError) {
-        setDownloadError(error.message);
-      } else if (error instanceof Error) {
-        setDownloadError(error.message);
-      } else {
-        setDownloadError("Unable to download results.");
-      }
+      setDownloadError(getErrorMessage(error, "Unable to download results."));
     } finally {
       setIsDownloading(false);
     }
@@ -102,26 +68,7 @@ export function IncidentAnalysisPage() {
         </p>
       </section>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="min-w-0 flex-1">
-          <IncidentFileUpload onFileSelected={handleUpload} disabled={isUploading} />
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:w-64">
-          <p className="text-sm font-medium text-slate-900">Try the sample file</p>
-          <p className="mt-1 text-xs text-slate-500">
-            In remote dev, the file picker opens your local computer — not this workspace. Use the sample
-            button or drag the file from the editor file tree.
-          </p>
-          <button
-            type="button"
-            onClick={handleLoadSample}
-            disabled={isUploading}
-            className="mt-3 w-full rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Load sample incidents.csv
-          </button>
-        </div>
-      </div>
+      <IncidentFileUpload onFileSelected={handleUpload} disabled={isUploading} />
 
       {isUploading && (
         <p className="text-sm font-medium text-teal-700" role="status" aria-live="polite">
