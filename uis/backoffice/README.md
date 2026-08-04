@@ -39,7 +39,7 @@ The browser calls same-origin `/api/incidents/*` routes. Next.js proxies those r
 | `components/incidents/` | Upload UI and results panels |
 | `types/incidents.ts` | API response types |
 
-Test CSV: `data/raw/incidents.csv` at the repo root.
+Test CSV: `scripts/incidents.csv`.
 
 ## Dashboard sections
 

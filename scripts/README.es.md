@@ -11,5 +11,5 @@ Los scripts Python usan **[uv](https://docs.astral.sh/uv/)**. La configuración 
 
 ```bash
 uv sync
-uv run python scripts/analyze.py data/raw/incidents.csv
+uv run python scripts/analyze.py scripts/incidents.csv
 ```
