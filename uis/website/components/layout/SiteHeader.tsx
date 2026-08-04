@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
-import { appUrls, backofficeUtilitiesUrl } from "@/lib/app-urls";
+import { appUrls, backofficeUtilitiesUrl } from "@healthcore/navigation";
 
 export function SiteHeader() {
   const { lang, setLang, t } = useLanguage();

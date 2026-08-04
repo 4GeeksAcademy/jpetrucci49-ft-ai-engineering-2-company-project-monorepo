@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { appUrls, crossAppNav, crossAppNavLabels } from "@/lib/app-urls";
+import { appUrls, crossAppNav, crossAppNavLabels } from "@healthcore/navigation";
 
 const navItems = [
   { href: "/", label: "Dashboard" },

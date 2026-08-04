@@ -53,3 +53,13 @@ export function backofficeUtilitiesUrl(backofficeBase: string): string {
 
 /** English labels for internal tools (backoffice, tracker headers). */
 export const crossAppNavLabelsEn = crossAppNav.labels.en;
+
+/** Resolved cross-app URLs from standard Next.js public env vars. */
+export const appUrls = resolveAppUrls({
+  website: process.env.NEXT_PUBLIC_WEBSITE_URL,
+  backoffice: process.env.NEXT_PUBLIC_BACKOFFICE_URL,
+  tracker: process.env.NEXT_PUBLIC_TRACKER_URL,
+});
+
+/** Alias used by internal tool headers. */
+export const crossAppNavLabels = crossAppNavLabelsEn;

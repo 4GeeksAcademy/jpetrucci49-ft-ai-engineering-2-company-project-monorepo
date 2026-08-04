@@ -7,7 +7,7 @@ import {
   backofficeUtilitiesUrl,
   crossAppNav,
   crossAppNavLabels,
-} from "@/lib/app-urls";
+} from "@healthcore/navigation";
 
 const crossAppLinks = [
   { href: appUrls.website, label: crossAppNavLabels.publicSite },
