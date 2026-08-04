@@ -5,6 +5,7 @@ import { appUrls } from "@/lib/app-urls";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
+  { href: "/incidents", label: "Incidents" },
   { href: "/utilities", label: "Utilities" },
 ] as const;
 
