@@ -74,10 +74,6 @@ export function SupplierDirectoryPage() {
     );
   }
 
-  function handleSupplierDeleted(id: number) {
-    setSuppliers((current) => current.filter((item) => item.id !== id));
-  }
-
   function handleSupplierCreated(created: Supplier) {
     const matchesCountry = !filters.country || created.country === filters.country;
     const matchesCategory =
@@ -142,7 +138,6 @@ export function SupplierDirectoryPage() {
           <SupplierTable
             suppliers={suppliers}
             onSupplierUpdated={handleSupplierUpdated}
-            onSupplierDeleted={handleSupplierDeleted}
           />
         )}
       </section>

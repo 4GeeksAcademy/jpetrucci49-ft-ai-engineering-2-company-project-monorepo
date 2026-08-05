@@ -38,7 +38,7 @@ Ensure the API is running (`npm run dev:api` from repo root, or include it via `
 | `/` | Operations dashboard (billing, clinical, CME) |
 | `/utilities` | M2 utility tester |
 | `/incidents` | Patient incident CSV upload and analysis (M5) |
-| `/suppliers` | Supplier directory — browse, filter, register, update rate/status, remove (M6) |
+| `/suppliers` | Supplier directory — browse, filter, register, update rate/status (M6) |
 
 ## Incident analysis (M5)
 
@@ -62,9 +62,8 @@ The browser calls same-origin `/api/suppliers/*` routes. Next.js proxies to Fast
 | --- | --- |
 | `lib/api/suppliers.ts` | Client fetch helpers |
 | `lib/api/suppliers-server.ts` | Server-only proxy utilities |
-| `app/api/suppliers/**/route.ts` | BFF route handlers (list, create, rate, status, delete) |
+| `app/api/suppliers/**/route.ts` | BFF route handlers (list, create, rate, status; DELETE proxied for API use only) |
 | `components/suppliers/` | Directory page, table, filters, registration form |
-| `components/ConfirmDialog.tsx` | In-app confirmation modal (e.g. remove supplier) |
 | `types/suppliers.ts` | API types and category labels |
 
 **Before testing:** run `uv run --directory services/api seed` (or `uv run seed` from `services/api/`). Spec: `specs/06_SPECS_FRONTEND.md`.
@@ -74,8 +73,7 @@ UI highlights:
 - Filters by country and category (client refetch, no page reload)
 - **Register new supplier** button reveals the registration form above the table
 - Click-to-edit monthly rate with explicit Save; list sorted by name
-- Suspend / activate per row
-- Remove with application confirmation modal (not `window.confirm`)
+- Suspend / activate per row (suppliers are retained for audit history — no delete action in the UI)
 
 ## Dashboard sections
 

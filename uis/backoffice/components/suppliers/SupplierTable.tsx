@@ -2,9 +2,7 @@
 
 import { useState, type FocusEvent } from "react";
 
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
-  deleteSupplier,
   formatRate,
   updateSupplierRate,
   updateSupplierStatus,
@@ -21,7 +19,6 @@ interface SupplierTableProps {
   suppliers: Supplier[];
   disabled?: boolean;
   onSupplierUpdated: (supplier: Supplier) => void;
-  onSupplierDeleted: (id: number) => void;
 }
 
 const buttonBase =
@@ -92,15 +89,12 @@ export function SupplierTable({
   suppliers,
   disabled,
   onSupplierUpdated,
-  onSupplierDeleted,
 }: SupplierTableProps) {
   const [rateDrafts, setRateDrafts] = useState<Record<number, string>>({});
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
   const [rateErrors, setRateErrors] = useState<Record<number, string>>({});
   const [actionErrors, setActionErrors] = useState<Record<number, string>>({});
   const [busyRows, setBusyRows] = useState<Record<number, boolean>>({});
-  const [supplierPendingRemoval, setSupplierPendingRemoval] = useState<Supplier | null>(null);
-  const [isRemoving, setIsRemoving] = useState(false);
 
   function setRowBusy(id: number, busy: boolean) {
     setBusyRows((current) => ({ ...current, [id]: busy }));
@@ -211,32 +205,6 @@ export function SupplierTable({
     }
   }
 
-  async function confirmDelete() {
-    if (!supplierPendingRemoval) return;
-
-    const supplier = supplierPendingRemoval;
-    setIsRemoving(true);
-    setRowBusy(supplier.id, true);
-    setActionError(supplier.id, null);
-
-    try {
-      await deleteSupplier(supplier.id);
-      setSupplierPendingRemoval(null);
-      onSupplierDeleted(supplier.id);
-    } catch (error) {
-      setActionError(
-        supplier.id,
-        error instanceof SuppliersApiError || error instanceof Error
-          ? error.message
-          : "Unable to remove supplier."
-      );
-      setSupplierPendingRemoval(null);
-    } finally {
-      setIsRemoving(false);
-      setRowBusy(supplier.id, false);
-    }
-  }
-
   if (suppliers.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-600">
@@ -246,28 +214,7 @@ export function SupplierTable({
   }
 
   return (
-    <>
-      <ConfirmDialog
-        open={supplierPendingRemoval !== null}
-        title="Remove supplier?"
-        description={
-          supplierPendingRemoval ? (
-            <>
-              Remove <span className="font-medium text-slate-900">{supplierPendingRemoval.name}</span> from
-              the supplier directory? This cannot be undone.
-            </>
-          ) : null
-        }
-        confirmLabel={isRemoving ? "Removing…" : "Remove supplier"}
-        cancelLabel="Keep supplier"
-        confirmVariant="danger"
-        busy={isRemoving}
-        onConfirm={() => void confirmDelete()}
-        onCancel={() => {
-          if (!isRemoving) setSupplierPendingRemoval(null);
-        }}
-      />
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
           <tr>
@@ -366,24 +313,14 @@ export function SupplierTable({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleStatusToggle(supplier)}
-                        className={`${buttonBase} border-slate-300 bg-white hover:bg-slate-50`}
-                      >
-                        {supplier.status === "active" ? "Suspend" : "Activate"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => setSupplierPendingRemoval(supplier)}
-                        className={`${buttonBase} border-red-200 bg-white text-red-700 hover:bg-red-50`}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => handleStatusToggle(supplier)}
+                      className={`${buttonBase} border-slate-300 bg-white hover:bg-slate-50`}
+                    >
+                      {supplier.status === "active" ? "Suspend" : "Activate"}
+                    </button>
                     {actionErrors[supplier.id] && (
                       <p className="text-xs text-red-700" role="alert">
                         {actionErrors[supplier.id]}
@@ -396,7 +333,6 @@ export function SupplierTable({
           })}
         </tbody>
       </table>
-      </div>
-    </>
+    </div>
   );
 }

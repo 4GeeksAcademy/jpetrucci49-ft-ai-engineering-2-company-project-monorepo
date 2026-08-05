@@ -255,4 +255,4 @@ Implemented in subsequent milestone steps:
 - `seed.py` — loading initial supplier data from context (Step 2)
 - `uis/backoffice/app/suppliers/` — frontend directory page (Step 4)
 
-Note: `context/06_CONTEXT.md` describes suspension as the primary lifecycle action; the API and UI also expose hard delete for directory maintenance.
+Note: `context/06_CONTEXT.md` describes suspension as the primary lifecycle action for operations staff. The API exposes `DELETE` for the challenge; the backoffice UI does not offer delete — use suspend instead.

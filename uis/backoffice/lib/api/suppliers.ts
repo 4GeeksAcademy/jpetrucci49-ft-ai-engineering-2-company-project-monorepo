@@ -102,16 +102,3 @@ export function sortSuppliersByName(suppliers: Supplier[]): Supplier[] {
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
   );
 }
-
-export async function deleteSupplier(id: number): Promise<void> {
-  const response = await fetch(`${API_PREFIX}/${id}`, { method: "DELETE" });
-
-  if (response.status === 204) {
-    return;
-  }
-
-  if (!response.ok) {
-    const message = await parseErrorMessage(response);
-    throw new SuppliersApiError(message, response.status);
-  }
-}

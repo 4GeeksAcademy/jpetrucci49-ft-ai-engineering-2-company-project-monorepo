@@ -66,9 +66,8 @@ _Last updated: Milestone 6 complete — supplier directory API + backoffice UI_
 **Step 4 — Frontend**
 
 - [x] Spec: `specs/06_SPECS_FRONTEND.md`
-- [x] `uis/backoffice/app/suppliers` — directory page with filters, collapsible registration form, rate/status controls, remove with confirm modal
+- [x] `uis/backoffice/app/suppliers` — directory page with filters, collapsible registration form, rate/status controls (suspend only — no delete in UI)
 - [x] BFF routes at `app/api/suppliers/*`; nav link in `BackofficeShell`
-- [x] `components/ConfirmDialog.tsx` — reusable confirmation modal
 
 ## In progress
 

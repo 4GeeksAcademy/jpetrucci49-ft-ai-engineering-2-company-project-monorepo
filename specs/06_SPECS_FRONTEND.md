@@ -45,7 +45,6 @@ uis/backoffice/
       SupplierTable.tsx           ← list + row actions
       SupplierFilters.tsx         ← country / category controls
       SupplierRegistrationForm.tsx
-      ConfirmDialog.tsx           ← shared confirmation modal (used for remove)
   lib/
     api/
       suppliers.ts                ← browser fetch helpers (same-origin)
@@ -105,7 +104,6 @@ Client helpers in `lib/api/suppliers.ts` call same-origin BFF routes:
 | Register | `POST /api/suppliers` | `POST /suppliers` |
 | Update rate | `PATCH /api/suppliers/{id}/rate` | `PATCH /suppliers/{id}/rate` |
 | Change status | `PATCH /api/suppliers/{id}/status` | `PATCH /suppliers/{id}/status` |
-| Remove | `DELETE /api/suppliers/{id}` | `DELETE /suppliers/{id}` |
 
 Parse FastAPI error bodies (`detail` string or validation array) and surface a readable message in the UI — same approach as `lib/api/incidents.ts`.
 
@@ -201,13 +199,9 @@ Each row must support:
 - `PATCH /api/suppliers/{id}/status` with `{ "status": "active" | "suspended" }`.
 - On success, update the row's `status` in local state immediately.
 
-**Remove**
+Per `context/06_CONTEXT.md`, suppliers are **suspended, not deleted** in normal operations — preserve directory history for audit. Do **not** expose a remove/delete control in the UI. The `DELETE /suppliers/{id}` API endpoint remains available for the challenge but is out of scope for this page.
 
-- Per-row **Remove** control calling `DELETE /api/suppliers/{id}`.
-- Confirm with an **in-app modal** (not `window.confirm`) before deleting.
-- On success, remove the row from local state immediately.
-
-Show per-row or inline error text if a PATCH/DELETE fails.
+Show per-row or inline error text if a PATCH fails.
 
 ### 7.5 Status styling
 
@@ -256,8 +250,7 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 5. Register a new supplier — appears in the list on success; invalid input shows an error.
 6. Change a row's rate — list updates with new rate after save.
 7. Suspend a supplier — badge changes to suspended styling.
-8. Remove a supplier — confirmation modal, then row disappears from the list.
-9. Network tab shows requests to `/api/suppliers/*`, not direct `:8000` calls from the browser.
+8. Network tab shows requests to `/api/suppliers/*`, not direct `:8000` calls from the browser.
 
 ---
 
@@ -270,7 +263,6 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 - [ ] Allow updating the rate field defined in the CONTEXT from the interface and reflect the change in the list immediately after the API responds.
 - [ ] Allow changing a supplier's status (activate / suspend) from the interface with a visible control on each row or in the detail view.
 - [ ] Visually distinguish active suppliers from suspended ones (for example, with a colour-coded badge or differentiated style).
-- [ ] Remove supplier with in-app confirmation modal; reflect deletion in the list immediately.
 - [ ] BFF route handlers proxy to FastAPI; `SUPPLIERS_API_URL` documented in `.env.example`
 - [ ] Loading and error states for list load, create, rate update, and status change
 
@@ -278,6 +270,7 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 
 ## 11. Out of Scope
 
+- `DELETE /suppliers/{id}` from the UI (API supports it for the challenge; operations staff suspend instead)
 - Dedicated supplier detail route (`/suppliers/[id]`) unless needed for row actions
 - Authentication or role-based access
 - Edit of fields other than rate and status (no general edit form)
