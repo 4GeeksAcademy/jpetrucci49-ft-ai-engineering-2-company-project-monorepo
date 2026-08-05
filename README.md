@@ -26,6 +26,7 @@ This starts every frontend and the API concurrently:
 | Operations | http://localhost:3001 | Billing, clinical, CME dashboards |
 | Utility tester | http://localhost:3001/utilities | M2 function manual runner |
 | Incident analysis | http://localhost:3001/incidents | CSV upload + summary (M5) |
+| Supplier directory | http://localhost:3001/suppliers | Browse and manage vendors (M6) |
 | Talent pipeline tracker | http://localhost:3002 | Recruitment pipeline (M3) |
 | HealthCore API | http://localhost:8000 | FastAPI — incidents, suppliers (M5/M6) |
 | API docs | http://localhost:8000/docs | OpenAPI (Swagger) |

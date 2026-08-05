@@ -1,6 +1,6 @@
 # HealthCore Operations
 
-Internal HealthCore Digital dashboard surfacing Milestone 2 operational reporting utilities and Milestone 5 patient incident analysis.
+Internal HealthCore Digital dashboard surfacing Milestone 2 operational reporting utilities, Milestone 5 patient incident analysis, and Milestone 6 supplier directory.
 
 ## Stack
 
@@ -26,6 +26,7 @@ From the repo root, `npm run dev` starts the backoffice on port **3001** alongsi
 | `/` | Operations dashboard (billing, clinical, CME) |
 | `/utilities` | M2 utility tester |
 | `/incidents` | Patient incident CSV upload and analysis (M5) |
+| `/suppliers` | Supplier directory — browse, filter, register, update rate/status (M6) |
 
 ## Incident analysis (M5)
 
@@ -40,6 +41,20 @@ The browser calls same-origin `/api/incidents/*` routes. Next.js proxies those r
 | `types/incidents.ts` | API response types |
 
 Test CSV: `scripts/incidents.csv`.
+
+## Supplier directory (M6)
+
+The browser calls same-origin `/api/suppliers/*` routes. Next.js proxies to FastAPI (`SUPPLIERS_API_URL`, default `http://127.0.0.1:8000`).
+
+| File | Role |
+| --- | --- |
+| `lib/api/suppliers.ts` | Client fetch helpers |
+| `lib/api/suppliers-server.ts` | Server-only proxy utilities |
+| `app/api/suppliers/**/route.ts` | BFF route handlers |
+| `components/suppliers/` | Directory page, table, filters, registration form |
+| `types/suppliers.ts` | API types and category labels |
+
+Run `uv run seed` in `services/api/` before testing. Spec: `specs/06_SPECS_FRONTEND.md`.
 
 ## Dashboard sections
 

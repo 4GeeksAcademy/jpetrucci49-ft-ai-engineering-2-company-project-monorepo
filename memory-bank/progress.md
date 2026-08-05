@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 6 Step 3 — supplier directory API endpoints_
+_Last updated: Milestone 6 Step 4 — supplier directory frontend_
 
 ## Completed
 
@@ -63,9 +63,14 @@ _Last updated: Milestone 6 Step 3 — supplier directory API endpoints_
 - [x] `services/api/routes/suppliers.py` — CRUD + rate/status PATCH
 - [x] Mounted in `app/main.py` at `/suppliers`
 
+**Step 4 — Frontend**
+
+- [x] Spec: `specs/06_SPECS_FRONTEND.md`
+- [x] `uis/backoffice/app/suppliers` — directory page with filters, registration form, rate/status controls
+- [x] BFF routes at `app/api/suppliers/*`; nav link in `BackofficeShell`
+
 ## In progress
 
-- [ ] M6 Step 4 — Frontend (`uis/application/app/suppliers/`)
 - [ ] Live API integrations for backoffice operations dashboard (future milestone)
 
 ## Planned next

@@ -77,6 +77,7 @@ def list_suppliers(
 
     documents = get_suppliers_table().all()
     filtered = _apply_filters(documents, country, category)
+    filtered.sort(key=lambda doc: doc.get("name", "").casefold())
     return [_to_supplier(doc) for doc in filtered]
 
 
