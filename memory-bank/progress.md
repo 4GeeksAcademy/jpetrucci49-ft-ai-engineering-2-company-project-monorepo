@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 6 Step 1 — supplier directory data model_
+_Last updated: Milestone 6 Step 2 — supplier directory seeder_
 
 ## Completed
 
@@ -50,9 +50,15 @@ _Last updated: Milestone 6 Step 1 — supplier directory data model_
 - [x] `services/api/models.py` — Pydantic enums, `SupplierCreate` / `SupplierUpdate` / `SupplierRateUpdate` / `SupplierStatusUpdate` / `Supplier`
 - [x] Validation: status enum, positive `monthly_rate`, category whitelist, country–currency pairing
 
+**Step 2 — Seeder**
+
+- [x] Spec: `specs/06_SPECS_SEEDER.md`
+- [x] `services/api/database.py` — TinyDB init (`suppliers.json`, `get_suppliers_table()`)
+- [x] `services/api/seed.py` — 15 context suppliers, idempotent by `name` + `country`
+- [x] `uv run seed` from `services/api/`
+
 ## In progress
 
-- [ ] M6 Step 2 — TinyDB (`database.py`) and seed script
 - [ ] M6 Step 3 — REST routes (`routes/suppliers.py`)
 - [ ] M6 Step 4 — Frontend (`uis/application/app/suppliers/`)
 - [ ] Live API integrations for backoffice operations dashboard (future milestone)
