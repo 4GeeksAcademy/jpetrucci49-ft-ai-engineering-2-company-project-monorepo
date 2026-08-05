@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 6 Step 2 — supplier directory seeder_
+_Last updated: Milestone 6 Step 3 — supplier directory API endpoints_
 
 ## Completed
 
@@ -57,9 +57,14 @@ _Last updated: Milestone 6 Step 2 — supplier directory seeder_
 - [x] `services/api/seed.py` — 15 context suppliers, idempotent by `name` + `country`
 - [x] `uv run seed` from `services/api/`
 
+**Step 3 — API endpoints**
+
+- [x] Spec: `specs/06_SPECS_ENDPOINTS.md`
+- [x] `services/api/routes/suppliers.py` — CRUD + rate/status PATCH
+- [x] Mounted in `app/main.py` at `/suppliers`
+
 ## In progress
 
-- [ ] M6 Step 3 — REST routes (`routes/suppliers.py`)
 - [ ] M6 Step 4 — Frontend (`uis/application/app/suppliers/`)
 - [ ] Live API integrations for backoffice operations dashboard (future milestone)
 
