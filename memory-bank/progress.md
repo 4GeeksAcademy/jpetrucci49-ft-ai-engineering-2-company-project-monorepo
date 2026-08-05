@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 5 Phase 2 — incident analysis platform integration_
+_Last updated: Milestone 6 Step 1 — supplier directory data model_
 
 ## Completed
 
@@ -42,8 +42,19 @@ _Last updated: Milestone 5 Phase 2 — incident analysis platform integration_
 - [x] Backoffice `/incidents` page — upload, summary, CSV download
 - [x] Root `npm run dev:api`; CLI refactored to import shared module
 
+### Milestone 6 — Supplier directory (Lightweight Storage API)
+
+**Step 1 — Data model**
+
+- [x] Spec: `specs/06_SPECS_DATA.md`
+- [x] `services/api/models.py` — Pydantic enums, `SupplierCreate` / `SupplierUpdate` / `SupplierRateUpdate` / `SupplierStatusUpdate` / `Supplier`
+- [x] Validation: status enum, positive `monthly_rate`, category whitelist, country–currency pairing
+
 ## In progress
 
+- [ ] M6 Step 2 — TinyDB (`database.py`) and seed script
+- [ ] M6 Step 3 — REST routes (`routes/suppliers.py`)
+- [ ] M6 Step 4 — Frontend (`uis/application/app/suppliers/`)
 - [ ] Live API integrations for backoffice operations dashboard (future milestone)
 
 ## Planned next
