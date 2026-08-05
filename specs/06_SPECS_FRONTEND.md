@@ -45,6 +45,7 @@ uis/backoffice/
       SupplierTable.tsx           ← list + row actions
       SupplierFilters.tsx         ← country / category controls
       SupplierRegistrationForm.tsx
+      ConfirmDialog.tsx           ← shared confirmation modal (used for remove)
   lib/
     api/
       suppliers.ts                ← browser fetch helpers (same-origin)
@@ -104,6 +105,7 @@ Client helpers in `lib/api/suppliers.ts` call same-origin BFF routes:
 | Register | `POST /api/suppliers` | `POST /suppliers` |
 | Update rate | `PATCH /api/suppliers/{id}/rate` | `PATCH /suppliers/{id}/rate` |
 | Change status | `PATCH /api/suppliers/{id}/status` | `PATCH /suppliers/{id}/status` |
+| Remove | `DELETE /api/suppliers/{id}` | `DELETE /suppliers/{id}` |
 
 Parse FastAPI error bodies (`detail` string or validation array) and surface a readable message in the UI — same approach as `lib/api/incidents.ts`.
 
@@ -154,7 +156,9 @@ Valid category slugs match `VALID_CATEGORIES` in `services/api/models.py`.
 
 ### 7.3 Register new supplier
 
-Provide a form (section above the table or modal) with fields matching `SupplierCreate`:
+The form is **hidden by default**. Provide a **Register new supplier** button in the toolbar (alongside filters) that reveals the form **above the table** — keep the supplier list visible so staff can check for duplicates while registering.
+
+Form fields matching `SupplierCreate`:
 
 | Field | Required |
 | --- | --- |
@@ -172,9 +176,10 @@ Provide a form (section above the table or modal) with fields matching `Supplier
 On submit:
 
 1. `POST /api/suppliers` with JSON body.
-2. On **201**, prepend or merge the returned supplier into the list immediately.
+2. On **201**, merge the returned supplier into the list immediately (sorted by name).
 3. On **422** or other error, show the API error message — do not clear the form unless submission succeeded.
 4. Show loading state on the submit button while in flight.
+5. On success, close/hide the registration form. Provide **Cancel** to dismiss without saving.
 
 Enforce country–currency pairing in the form UX (e.g. selecting `USA` sets currency to `USD`) to reduce avoidable 422 responses.
 
@@ -184,8 +189,9 @@ Each row must support:
 
 **Update rate**
 
-- Inline input or small edit control for `monthly_rate`.
-- On save, `PATCH /api/suppliers/{id}/rate` with `{ "monthly_rate": <number> }`.
+- Display the current rate as clickable text (editable affordance, e.g. dashed border + icon).
+- Click to edit inline; **Save** submits `PATCH /api/suppliers/{id}/rate` with `{ "monthly_rate": <number> }`.
+- Dismiss edit on blur or Escape without saving; do not auto-submit on blur.
 - On success, update that row in local state (including `updated_at` from the response).
 - Reject zero/negative values in the UI before calling the API when practical; still handle 422 from the API.
 
@@ -195,7 +201,13 @@ Each row must support:
 - `PATCH /api/suppliers/{id}/status` with `{ "status": "active" | "suspended" }`.
 - On success, update the row's `status` in local state immediately.
 
-Show per-row or inline error text if a PATCH fails.
+**Remove**
+
+- Per-row **Remove** control calling `DELETE /api/suppliers/{id}`.
+- Confirm with an **in-app modal** (not `window.confirm`) before deleting.
+- On success, remove the row from local state immediately.
+
+Show per-row or inline error text if a PATCH/DELETE fails.
 
 ### 7.5 Status styling
 
@@ -244,7 +256,8 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 5. Register a new supplier — appears in the list on success; invalid input shows an error.
 6. Change a row's rate — list updates with new rate after save.
 7. Suspend a supplier — badge changes to suspended styling.
-8. Network tab shows requests to `/api/suppliers/*`, not direct `:8000` calls from the browser.
+8. Remove a supplier — confirmation modal, then row disappears from the list.
+9. Network tab shows requests to `/api/suppliers/*`, not direct `:8000` calls from the browser.
 
 ---
 
@@ -257,6 +270,7 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 - [ ] Allow updating the rate field defined in the CONTEXT from the interface and reflect the change in the list immediately after the API responds.
 - [ ] Allow changing a supplier's status (activate / suspend) from the interface with a visible control on each row or in the detail view.
 - [ ] Visually distinguish active suppliers from suspended ones (for example, with a colour-coded badge or differentiated style).
+- [ ] Remove supplier with in-app confirmation modal; reflect deletion in the list immediately.
 - [ ] BFF route handlers proxy to FastAPI; `SUPPLIERS_API_URL` documented in `.env.example`
 - [ ] Loading and error states for list load, create, rate update, and status change
 
@@ -264,7 +278,6 @@ Request payloads for create/rate/status may reuse narrower types aligned with th
 
 ## 11. Out of Scope
 
-- `DELETE /suppliers/{id}` from the UI (API supports it; not required for this page)
 - Dedicated supplier detail route (`/suppliers/[id]`) unless needed for row actions
 - Authentication or role-based access
 - Edit of fields other than rate and status (no general edit form)

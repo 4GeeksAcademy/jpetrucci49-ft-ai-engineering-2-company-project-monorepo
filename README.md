@@ -8,12 +8,27 @@ HealthCore project workspace containing:
 - Agent infrastructure (`memory-bank/`, `AGENTS.md`, `.agents/`, `skills/`)
 - Vitest unit tests in `tests/utils`
 
-## Quick Start — All applications
+## Quick Start
 
-From the repository root:
+### First-time setup
 
 ```bash
 npm install
+cd services/api && uv sync && uv run seed && cd ../..
+npm run dev
+```
+
+The seed step loads 15 suppliers into TinyDB for the supplier directory (M6). It is **idempotent** — safe to run again. From the repo root you can also run:
+
+```bash
+uv run --directory services/api seed
+```
+
+### Run all applications
+
+From the repository root (after [first-time setup](#first-time-setup)):
+
+```bash
 npm run dev
 ```
 
@@ -31,7 +46,7 @@ This starts every frontend and the API concurrently:
 | HealthCore API | http://localhost:8000 | FastAPI — incidents, suppliers (M5/M6) |
 | API docs | http://localhost:8000/docs | OpenAPI (Swagger) |
 
-Copy `.env.example` to `.env.local` in each `uis/*` app if you need custom cross-app URLs.
+Copy `.env.example` to `.env.local` in a `uis/*` app when you need custom API proxy URLs or cross-app links (see each app’s README).
 
 ### Individual apps
 
@@ -46,11 +61,12 @@ npm run dev:uis          # frontends only (no hub or API)
 
 ## HealthCore API (`services/api/`)
 
-Python 3.12+ service managed with [uv](https://docs.astral.sh/uv/). See [`services/api/README.md`](services/api/README.md) for endpoints and environment variables.
+Python 3.12+ service managed with [uv](https://docs.astral.sh/uv/). See [`services/api/README.md`](services/api/README.md) for endpoints, seeding, and environment variables.
 
 ```bash
 cd services/api
 uv sync
+uv run seed                    # load supplier directory (first-time / after reset)
 uv run uvicorn app.main:app --reload --port 8000   # or: npm run dev:api from repo root
 ```
 
@@ -65,8 +81,8 @@ uv run seed
 
 | Run | Expected output |
 | --- | --- |
-| First run (empty database) | `15 supplier(s) inserted (15 total in database)` |
-| Later runs | `0 supplier(s) inserted (15 total in database)` |
+| First run (empty database) | `Seeder finished: 15 supplier(s) inserted (15 total in database).` |
+| Later runs | `Seeder finished: 0 supplier(s) inserted (15 total in database).` |
 
 Data is stored in `services/api/suppliers.json` (gitignored). Override the path with `SUPPLIERS_DB_PATH` — see `services/api/.env.example`.
 

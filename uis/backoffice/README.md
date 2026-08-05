@@ -11,13 +11,25 @@ Internal HealthCore Digital dashboard surfacing Milestone 2 operational reportin
 
 ## Setup
 
+From the repository root (recommended):
+
 ```bash
 npm install
-cp .env.example .env
+cd services/api && uv sync && uv run seed && cd ../..
+npm run dev
+```
+
+The seed step loads 15 suppliers into TinyDB for `/suppliers`. It is idempotent — `0 inserted` with `15 total` means data is already present.
+
+This app only, from `uis/backoffice/`:
+
+```bash
+npm install
+cp .env.example .env.local   # optional — custom FastAPI proxy URLs
 npm run dev -- -p 3001
 ```
 
-From the repo root, `npm run dev` starts the backoffice on port **3001** alongside the API and other apps.
+Ensure the API is running (`npm run dev:api` from repo root, or include it via `npm run dev`).
 
 ## Routes
 
@@ -26,7 +38,7 @@ From the repo root, `npm run dev` starts the backoffice on port **3001** alongsi
 | `/` | Operations dashboard (billing, clinical, CME) |
 | `/utilities` | M2 utility tester |
 | `/incidents` | Patient incident CSV upload and analysis (M5) |
-| `/suppliers` | Supplier directory — browse, filter, register, update rate/status (M6) |
+| `/suppliers` | Supplier directory — browse, filter, register, update rate/status, remove (M6) |
 
 ## Incident analysis (M5)
 
@@ -50,11 +62,20 @@ The browser calls same-origin `/api/suppliers/*` routes. Next.js proxies to Fast
 | --- | --- |
 | `lib/api/suppliers.ts` | Client fetch helpers |
 | `lib/api/suppliers-server.ts` | Server-only proxy utilities |
-| `app/api/suppliers/**/route.ts` | BFF route handlers |
+| `app/api/suppliers/**/route.ts` | BFF route handlers (list, create, rate, status, delete) |
 | `components/suppliers/` | Directory page, table, filters, registration form |
+| `components/ConfirmDialog.tsx` | In-app confirmation modal (e.g. remove supplier) |
 | `types/suppliers.ts` | API types and category labels |
 
-Run `uv run seed` in `services/api/` before testing. Spec: `specs/06_SPECS_FRONTEND.md`.
+**Before testing:** run `uv run --directory services/api seed` (or `uv run seed` from `services/api/`). Spec: `specs/06_SPECS_FRONTEND.md`.
+
+UI highlights:
+
+- Filters by country and category (client refetch, no page reload)
+- **Register new supplier** button reveals the registration form above the table
+- Click-to-edit monthly rate with explicit Save; list sorted by name
+- Suspend / activate per row
+- Remove with application confirmation modal (not `window.confirm`)
 
 ## Dashboard sections
 

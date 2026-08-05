@@ -35,7 +35,7 @@ services/
     app/
       main.py            ← mount supplier router (this step)
 uis/
-  application/
+  backoffice/
     app/
       suppliers/         ← frontend (Step 4)
 ```
@@ -260,8 +260,9 @@ OpenAPI docs at [http://localhost:8000/docs](http://localhost:8000/docs) must li
 
 ---
 
-## 11. Out of Scope (Step 4)
+## 11. Out of Scope (Step 4+)
 
-- Frontend page at `uis/application/app/suppliers/`
 - General-purpose `PUT` / full `PATCH` for arbitrary field updates
 - Authentication or authorisation
+
+Step 4 frontend: `uis/backoffice/app/suppliers/` (BFF at `uis/backoffice/app/api/suppliers/`).

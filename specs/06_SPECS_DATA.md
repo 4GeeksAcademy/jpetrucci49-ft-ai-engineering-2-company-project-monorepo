@@ -248,8 +248,11 @@ The following must raise Pydantic `ValidationError` (or equivalent HTTP 422 when
 
 ## 11. Out of Scope (Later Steps)
 
-- `database.py` — TinyDB connection, file path, and CRUD operations
-- `routes/suppliers.py` — REST endpoints (import models from `models.py`)
-- `seed.py` — loading initial supplier data from context
-- `uis/application/app/suppliers/` — frontend directory page
-- Deletion endpoints (suppliers are suspended, not deleted)
+Implemented in subsequent milestone steps:
+
+- `database.py` — TinyDB connection, file path, and CRUD operations (Step 2)
+- `routes/suppliers.py` — REST endpoints including `DELETE` (Step 3)
+- `seed.py` — loading initial supplier data from context (Step 2)
+- `uis/backoffice/app/suppliers/` — frontend directory page (Step 4)
+
+Note: `context/06_CONTEXT.md` describes suspension as the primary lifecycle action; the API and UI also expose hard delete for directory maintenance.

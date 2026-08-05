@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 6 Step 4 — supplier directory frontend_
+_Last updated: Milestone 6 complete — supplier directory API + backoffice UI_
 
 ## Completed
 
@@ -66,8 +66,9 @@ _Last updated: Milestone 6 Step 4 — supplier directory frontend_
 **Step 4 — Frontend**
 
 - [x] Spec: `specs/06_SPECS_FRONTEND.md`
-- [x] `uis/backoffice/app/suppliers` — directory page with filters, registration form, rate/status controls
+- [x] `uis/backoffice/app/suppliers` — directory page with filters, collapsible registration form, rate/status controls, remove with confirm modal
 - [x] BFF routes at `app/api/suppliers/*`; nav link in `BackofficeShell`
+- [x] `components/ConfirmDialog.tsx` — reusable confirmation modal
 
 ## In progress
 

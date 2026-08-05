@@ -3,7 +3,7 @@
 FastAPI service for internal HealthCore Digital tools:
 
 - **M5** — Patient incident CSV analysis (backoffice `/incidents`)
-- **M6** — Supplier directory (TinyDB + Pydantic; REST API live; UI in progress)
+- **M6** — Supplier directory (TinyDB + Pydantic; REST API + backoffice UI at `/suppliers`)
 
 ## Stack
 
@@ -45,6 +45,14 @@ Pydantic models live in `models.py`. TinyDB is initialised in `database.py`. See
 
 ### Seed the database
 
+From the repository root:
+
+```bash
+uv run --directory services/api seed
+```
+
+Or from `services/api/`:
+
 ```bash
 cd services/api
 uv run seed
@@ -60,13 +68,16 @@ The seeder is **idempotent** — it skips suppliers already stored (matched by `
 Reset and re-seed:
 
 ```bash
+cd services/api
 rm -f suppliers.json
 uv run seed
 ```
 
 Optional env var `SUPPLIERS_DB_PATH` overrides the default database file path (see `.env.example`).
 
-Specs: `specs/06_SPECS_DATA.md`, `specs/06_SPECS_SEEDER.md`, `specs/06_SPECS_ENDPOINTS.md`.
+Specs: `specs/06_SPECS_DATA.md`, `specs/06_SPECS_SEEDER.md`, `specs/06_SPECS_ENDPOINTS.md`, `specs/06_SPECS_FRONTEND.md`.
+
+The backoffice UI lives at `uis/backoffice/app/suppliers/` (not `uis/application/`).
 
 ### Supplier endpoints
 
