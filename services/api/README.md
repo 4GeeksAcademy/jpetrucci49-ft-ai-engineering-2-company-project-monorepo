@@ -3,7 +3,7 @@
 FastAPI service for internal HealthCore Digital tools:
 
 - **M5** — Patient incident CSV analysis (backoffice `/incidents`)
-- **M6** — Supplier directory (TinyDB + Pydantic; REST routes and UI in progress)
+- **M6** — Supplier directory (TinyDB + Pydantic; REST API live; UI in progress)
 
 ## Stack
 
@@ -66,7 +66,24 @@ uv run seed
 
 Optional env var `SUPPLIERS_DB_PATH` overrides the default database file path (see `.env.example`).
 
-Specs: `specs/06_SPECS_DATA.md`, `specs/06_SPECS_SEEDER.md`.
+Specs: `specs/06_SPECS_DATA.md`, `specs/06_SPECS_SEEDER.md`, `specs/06_SPECS_ENDPOINTS.md`.
+
+### Supplier endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/suppliers` | Register supplier → `201` + `Supplier` |
+| `GET` | `/suppliers` | List all; optional `?country=USA\|UK` and `?category=<slug>` |
+| `GET` | `/suppliers/{id}` | Supplier detail |
+| `PATCH` | `/suppliers/{id}/rate` | Update `monthly_rate` (sets `updated_at`) |
+| `PATCH` | `/suppliers/{id}/status` | Set `active` or `suspended` |
+| `DELETE` | `/suppliers/{id}` | Remove supplier → `204` |
+
+```bash
+curl http://localhost:8000/suppliers
+curl "http://localhost:8000/suppliers?country=USA&category=clinical_software"
+curl http://localhost:8000/suppliers/1
+```
 
 ## Incident analysis (Milestone 5)
 
@@ -117,10 +134,10 @@ Expected totals for `scripts/incidents.csv`: 100 total, 94 valid, 6 invalid, ave
 
 ```text
 services/api/
-  app/main.py          ← FastAPI app (incidents today; suppliers routes pending)
+  app/main.py          ← FastAPI app (incidents + suppliers)
   models.py            ← Supplier Pydantic models
   database.py          ← TinyDB initialisation
   seed.py              ← Initial supplier data (`uv run seed`)
-  routes/              ← Supplier REST endpoints (planned)
+  routes/suppliers.py  ← Supplier REST endpoints
   suppliers.json       ← TinyDB file (gitignored, created by seed)
 ```
