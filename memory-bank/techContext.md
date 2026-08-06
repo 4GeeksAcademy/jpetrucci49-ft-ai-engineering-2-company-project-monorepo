@@ -12,7 +12,7 @@
 ├── milestones/           # Programme requirements (read-only unless approved)
 ├── src/                  # M2 TypeScript utilities and types
 ├── scripts/              # Python helper scripts (M5 incident analysis)
-├── services/api/         # FastAPI internal API (M5 incident analysis)
+├── services/api/         # FastAPI internal API (M5 incidents, M6 suppliers)
 ├── pyproject.toml        # Python dependencies (uv)
 ├── uv.lock               # Locked Python dependency versions
 ├── tests/utils/          # Vitest suites and shared fixtures
@@ -29,7 +29,7 @@
 | --- | --- |
 | Root / M2 | TypeScript, Vitest, `concurrently`, `src/utility-registry.ts` |
 | `scripts/` (M5) | Python 3.12+, [uv](https://docs.astral.sh/uv/), pandas |
-| `services/api/` (M5) | Python 3.12+, FastAPI, uvicorn, pandas |
+| `services/api/` (M5–M6) | Python 3.12+, FastAPI, uvicorn, pandas, TinyDB (M6) |
 | All `uis/*` | Next.js 16, React 19, Tailwind CSS v4 |
 
 ## Architectural decisions
@@ -40,6 +40,7 @@
 4. **Human-readable labels in UI** — map raw API/domain values to labels (status/stage in M3; compliance status in CME reports).
 5. **No external state libraries** in Next.js apps — React hooks only.
 6. **M5 incident analysis** — business rules in `services/api/app/incidents/analysis.py`; backoffice proxies via `app/api/incidents/` route handlers; client uses same-origin `/api/incidents/*`.
+7. **M6 supplier directory** — Pydantic models + TinyDB in `services/api/`; REST at `/suppliers`; backoffice proxies via `app/api/suppliers/`; seed with `uv run --directory services/api seed`.
 
 ## Technical constraints
 
@@ -64,9 +65,10 @@ npm run lint:apps
 uv sync
 uv run python scripts/analyze.py scripts/incidents.csv
 
-# HealthCore API (M5)
-cd services/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
+# HealthCore API (M5–M6)
+cd services/api && uv sync && uv run seed && uv run uvicorn app.main:app --reload --port 8000
 npm run dev:api
+uv run --directory services/api seed   # from repo root
 ```
 
 ## Path aliases (backoffice)

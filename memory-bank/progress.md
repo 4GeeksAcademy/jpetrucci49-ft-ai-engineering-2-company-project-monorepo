@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 5 Phase 2 — incident analysis platform integration_
+_Last updated: Milestone 6 complete — supplier directory API + backoffice UI_
 
 ## Completed
 
@@ -41,6 +41,33 @@ _Last updated: Milestone 5 Phase 2 — incident analysis platform integration_
 - [x] FastAPI service — `POST /api/incidents/analyze`, `GET /api/incidents/results/export`
 - [x] Backoffice `/incidents` page — upload, summary, CSV download
 - [x] Root `npm run dev:api`; CLI refactored to import shared module
+
+### Milestone 6 — Supplier directory (Lightweight Storage API)
+
+**Step 1 — Data model**
+
+- [x] Spec: `specs/06_SPECS_DATA.md`
+- [x] `services/api/models.py` — Pydantic enums, `SupplierCreate` / `SupplierUpdate` / `SupplierRateUpdate` / `SupplierStatusUpdate` / `Supplier`
+- [x] Validation: status enum, positive `monthly_rate`, category whitelist, country–currency pairing
+
+**Step 2 — Seeder**
+
+- [x] Spec: `specs/06_SPECS_SEEDER.md`
+- [x] `services/api/database.py` — TinyDB init (`suppliers.json`, `get_suppliers_table()`)
+- [x] `services/api/seed.py` — 15 context suppliers, idempotent by `name` + `country`
+- [x] `uv run seed` from `services/api/`
+
+**Step 3 — API endpoints**
+
+- [x] Spec: `specs/06_SPECS_ENDPOINTS.md`
+- [x] `services/api/routes/suppliers.py` — CRUD + rate/status PATCH
+- [x] Mounted in `app/main.py` at `/suppliers`
+
+**Step 4 — Frontend**
+
+- [x] Spec: `specs/06_SPECS_FRONTEND.md`
+- [x] `uis/backoffice/app/suppliers` — directory page with filters, collapsible registration form, rate/status controls (suspend only — no delete in UI)
+- [x] BFF routes at `app/api/suppliers/*`; nav link in `BackofficeShell`
 
 ## In progress
 

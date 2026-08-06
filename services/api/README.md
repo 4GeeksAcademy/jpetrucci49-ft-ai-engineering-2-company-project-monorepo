@@ -1,6 +1,9 @@
 # HealthCore API
 
-FastAPI service for internal HealthCore Digital tools. Phase 2 exposes patient incident CSV analysis for the backoffice Patient Experience workflow.
+FastAPI service for internal HealthCore Digital tools:
+
+- **M5** — Patient incident CSV analysis (backoffice `/incidents`)
+- **M6** — Supplier directory (TinyDB + Pydantic; REST API + backoffice UI at `/suppliers`)
 
 ## Stack
 
@@ -10,18 +13,14 @@ FastAPI service for internal HealthCore Digital tools. Phase 2 exposes patient i
 | Python | 3.12+ |
 | Package manager | [uv](https://docs.astral.sh/uv/) |
 | Default port | `8000` |
+| Supplier storage | TinyDB (`suppliers.json`, gitignored) |
 
 ## Setup
 
 ```bash
 cd services/api
 uv sync
-```
-
-Copy environment variables if needed:
-
-```bash
-cp .env.example .env
+cp .env.example .env   # optional — CORS, SUPPLIERS_DB_PATH
 ```
 
 ## Run (development)
@@ -34,13 +33,72 @@ uv run uvicorn app.main:app --reload --port 8000
 
 OpenAPI docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-From the repository root (via npm):
+From the repository root:
 
 ```bash
 npm run dev:api
 ```
 
-## Endpoints
+## Supplier directory (Milestone 6)
+
+Pydantic models live in `models.py`. TinyDB is initialised in `database.py`. Seed data matches `context/06_CONTEXT.md`.
+
+### Seed the database
+
+From the repository root:
+
+```bash
+uv run --directory services/api seed
+```
+
+Or from `services/api/`:
+
+```bash
+cd services/api
+uv run seed
+```
+
+| Run | Expected output |
+| --- | --- |
+| First run (empty `suppliers.json`) | `Seeder finished: 15 supplier(s) inserted (15 total in database).` |
+| Subsequent runs | `Seeder finished: 0 supplier(s) inserted (15 total in database).` |
+
+The seeder is **idempotent** — it skips suppliers already stored (matched by `name` + `country`). `0 inserted` with `15 total` means the directory is already loaded, not a failure.
+
+Reset and re-seed:
+
+```bash
+cd services/api
+rm -f suppliers.json
+uv run seed
+```
+
+Optional env var `SUPPLIERS_DB_PATH` overrides the default database file path (see `.env.example`).
+
+Specs: `specs/06_SPECS_DATA.md`, `specs/06_SPECS_SEEDER.md`, `specs/06_SPECS_ENDPOINTS.md`, `specs/06_SPECS_FRONTEND.md`.
+
+The backoffice UI lives at `uis/backoffice/app/suppliers/` (not `uis/application/`).
+
+### Supplier endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/suppliers` | Register supplier → `201` + `Supplier` |
+| `GET` | `/suppliers` | List all; optional `?country=USA\|UK` and `?category=<slug>` |
+| `GET` | `/suppliers/{id}` | Supplier detail |
+| `PATCH` | `/suppliers/{id}/rate` | Update `monthly_rate` (sets `updated_at`) |
+| `PATCH` | `/suppliers/{id}/status` | Set `active` or `suspended` |
+| `DELETE` | `/suppliers/{id}` | Remove supplier → `204` |
+
+```bash
+curl http://localhost:8000/suppliers
+curl "http://localhost:8000/suppliers?country=USA&category=clinical_software"
+curl http://localhost:8000/suppliers/1
+```
+
+## Incident analysis (Milestone 5)
+
+### Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -82,3 +140,15 @@ curl -OJ http://localhost:8000/api/incidents/results/export
 ```
 
 Expected totals for `scripts/incidents.csv`: 100 total, 94 valid, 6 invalid, average satisfaction 3.58.
+
+## Project layout (M6 target)
+
+```text
+services/api/
+  app/main.py          ← FastAPI app (incidents + suppliers)
+  models.py            ← Supplier Pydantic models
+  database.py          ← TinyDB initialisation
+  seed.py              ← Initial supplier data (`uv run seed`)
+  routes/suppliers.py  ← Supplier REST endpoints
+  suppliers.json       ← TinyDB file (gitignored, created by seed)
+```

@@ -12,3 +12,4 @@ __pycache__/
 *.py[cod]
 .python-version.local
 results.csv
+services/api/suppliers.json

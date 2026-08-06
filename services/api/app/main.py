@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_cors_origin_regex, get_cors_origins
 from app.incidents.router import router as incidents_router
+from routes.suppliers import router as suppliers_router
 
 app = FastAPI(
     title="HealthCore API",
@@ -23,3 +24,4 @@ app.add_middleware(
 )
 
 app.include_router(incidents_router, prefix="/api")
+app.include_router(suppliers_router)
