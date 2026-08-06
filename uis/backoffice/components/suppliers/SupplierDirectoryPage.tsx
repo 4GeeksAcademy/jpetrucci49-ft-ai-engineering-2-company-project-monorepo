@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { SupplierFilters } from "@/components/suppliers/SupplierFilters";
 import { SupplierRegistrationForm } from "@/components/suppliers/SupplierRegistrationForm";
 import { SupplierTable } from "@/components/suppliers/SupplierTable";
 import { fetchSuppliers, sortSuppliersByName } from "@/lib/api/suppliers";
-import { SuppliersApiError, type Supplier, type SupplierListFilters } from "@/types/suppliers";
+import {
+  SUPPLIER_CATEGORIES,
+  SuppliersApiError,
+  type Supplier,
+  type SupplierCategory,
+  type SupplierListFilters,
+} from "@/types/suppliers";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof SuppliersApiError || error instanceof Error) {
@@ -15,9 +22,28 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function readFilters(searchParams: URLSearchParams): SupplierListFilters {
+  const filters: SupplierListFilters = {};
+
+  const country = searchParams.get("country");
+  if (country === "USA" || country === "UK") {
+    filters.country = country;
+  }
+
+  const category = searchParams.get("category");
+  if (category && SUPPLIER_CATEGORIES.includes(category as SupplierCategory)) {
+    filters.category = category;
+  }
+
+  return filters;
+}
+
 export function SupplierDirectoryPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const filters = useMemo(() => readFilters(searchParams), [searchParams]);
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [filters, setFilters] = useState<SupplierListFilters>({});
   const [listError, setListError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -65,7 +91,16 @@ export function SupplierDirectoryPage() {
   }, [filters]);
 
   function handleFiltersChange(next: SupplierListFilters) {
-    setFilters(next);
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (next.country) params.set("country", next.country);
+    else params.delete("country");
+
+    if (next.category) params.set("category", next.category);
+    else params.delete("category");
+
+    const query = params.toString();
+    router.replace(query ? `/suppliers?${query}` : "/suppliers", { scroll: false });
   }
 
   function handleSupplierUpdated(updated: Supplier) {
