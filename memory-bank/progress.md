@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 7 complete — JWT authentication and route protection_
+_Last updated: Milestone 8 complete — frontend auth flows and route protection_
 
 ## Completed
 
@@ -77,6 +77,14 @@ _Last updated: Milestone 7 complete — JWT authentication and route protection_
 - [x] `get_current_user`, `require_admin`, `require_self_or_admin` dependencies
 - [x] Protected all supplier and incident handlers; public only login + registration + docs
 - [x] `JWT_SECRET` required at startup; documented in `.env.example`
+
+### Milestone 8 — Frontend authentication (AUTH-02)
+
+- [x] Spec: `specs/08_SPECS.md`
+- [x] `packages/shared/auth/` — token storage, `authFetch`, shared login/register/profile forms
+- [x] Backoffice + talent tracker: `/login`, `/register`, `/account/profile`, `AuthGuard`, logout
+- [x] BFF auth routes; incident/supplier proxies forward `Authorization`
+- [x] `uis/website/` unchanged (fully public)
 
 ## In progress
 

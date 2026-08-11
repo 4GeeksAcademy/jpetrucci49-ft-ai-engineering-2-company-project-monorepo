@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useFilterReset } from "@/components/layout/FilterResetProvider";
 import {
   appUrls,
@@ -41,6 +42,12 @@ export function AppHeader() {
           >
             All candidates
           </Link>
+          <Link
+            href="/account/profile"
+            className="font-medium text-slate-700 hover:text-teal-700 hover:underline"
+          >
+            Account
+          </Link>
           <span className="hidden h-4 w-px bg-slate-300 sm:inline" aria-hidden="true" />
           {crossAppLinks.map((item) => (
             <a
@@ -51,6 +58,7 @@ export function AppHeader() {
               {item.label}
             </a>
           ))}
+          <LogoutButton className="text-slate-600 hover:text-teal-700 hover:underline" />
         </nav>
       </div>
     </header>

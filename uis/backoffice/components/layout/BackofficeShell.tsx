@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { appUrls, crossAppNav, crossAppNavLabels } from "@healthcore/navigation";
 
 const navItems = [
@@ -8,6 +9,7 @@ const navItems = [
   { href: "/incidents", label: "Incidents" },
   { href: "/suppliers", label: "Suppliers" },
   { href: crossAppNav.paths.backofficeUtilities, label: crossAppNavLabels.utilities },
+  { href: "/account/profile", label: "Account" },
 ] as const;
 
 const crossAppLinks = [
@@ -40,6 +42,7 @@ export function BackofficeShell({ children }: { children: React.ReactNode }) {
                 {item.label}
               </a>
             ))}
+            <LogoutButton />
           </nav>
         </div>
       </header>

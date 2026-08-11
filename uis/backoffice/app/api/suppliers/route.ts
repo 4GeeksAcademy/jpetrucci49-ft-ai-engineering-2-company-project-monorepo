@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.toString();
     const path = search ? `/suppliers?${search}` : "/suppliers";
-    const response = await proxyToSuppliersApi(path);
+    const response = await proxyToSuppliersApi(request, path);
     return proxySuppliersResponse(response);
   } catch {
     return suppliersApiUnavailableResponse();
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const response = await proxyToSuppliersApi("/suppliers", {
+    const response = await proxyToSuppliersApi(request, "/suppliers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
