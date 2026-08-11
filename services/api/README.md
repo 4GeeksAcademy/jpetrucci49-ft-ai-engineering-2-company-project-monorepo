@@ -4,6 +4,7 @@ FastAPI service for internal HealthCore Digital tools:
 
 - **M5** — Patient incident CSV analysis (backoffice `/incidents`)
 - **M6** — Supplier directory (TinyDB + Pydantic; REST API + backoffice UI at `/suppliers`)
+- **M7** — JWT authentication and route protection (TinyDB users + profiles)
 
 ## Stack
 
@@ -14,21 +15,25 @@ FastAPI service for internal HealthCore Digital tools:
 | Package manager | [uv](https://docs.astral.sh/uv/) |
 | Default port | `8000` |
 | Supplier storage | TinyDB (`suppliers.json`, gitignored) |
+| Auth storage | TinyDB (`auth.json`, gitignored) |
+| Tokens | PyJWT (HS256) + libpass bcrypt |
 
 ## Setup
 
 ```bash
 cd services/api
 uv sync
-cp .env.example .env   # optional — CORS, SUPPLIERS_DB_PATH
+cp .env.example .env   # required — set JWT_SECRET before starting the API
 ```
+
+`JWT_SECRET` is mandatory. The API fails fast at startup if it is missing.
 
 ## Run (development)
 
 From `services/api/`:
 
 ```bash
-uv run uvicorn app.main:app --reload --port 8000
+uv run --env-file .env uvicorn app.main:app --reload --port 8000
 ```
 
 OpenAPI docs: [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -38,6 +43,42 @@ From the repository root:
 ```bash
 npm run dev:api
 ```
+
+(`dev:api` loads `services/api/.env` — create it from `.env.example` first.)
+
+## Authentication (Milestone 7)
+
+Stateless bearer JWT auth. Register publicly, log in, then send `Authorization: Bearer <token>` on protected routes.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/users` | Public | Register user + profile → **201** |
+| `POST` | `/auth/login` | Public | OAuth2 form (`username` = email) → JWT |
+| `GET` | `/auth/me` | Protected | Email, role, linked profile |
+| `GET` | `/profiles/me` | Protected | Owner profile |
+| `PUT` | `/profiles/me` | Protected | Update name, phone, address |
+| `GET` | `/users` | Admin | List users |
+| `GET/PUT/DELETE` | `/users/{id}` | Self or admin | User CRUD |
+
+All supplier and incident endpoints require a valid token. The backoffice BFF does not send tokens yet — expect **401** from those proxies until a follow-up milestone.
+
+### Quick auth test
+
+```bash
+# Register
+curl -s -X POST http://localhost:8000/users \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ops@example.com","password":"securepass123","name":"Ops User"}'
+
+# Login (OAuth2 form)
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+  -d 'username=ops@example.com&password=securepass123' | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# Protected route
+curl -s http://localhost:8000/suppliers -H "Authorization: Bearer $TOKEN"
+```
+
+Specs: `specs/07_SPECS.md`.
 
 ## Supplier directory (Milestone 6)
 
@@ -91,10 +132,12 @@ The backoffice UI lives at `uis/backoffice/app/suppliers/` (not `uis/application
 | `DELETE` | `/suppliers/{id}` | Remove supplier → `204` |
 
 ```bash
-curl http://localhost:8000/suppliers
-curl "http://localhost:8000/suppliers?country=USA&category=clinical_software"
-curl http://localhost:8000/suppliers/1
+curl -s http://localhost:8000/suppliers -H "Authorization: Bearer $TOKEN"
+curl -s "http://localhost:8000/suppliers?country=USA&category=clinical_software" -H "Authorization: Bearer $TOKEN"
+curl -s http://localhost:8000/suppliers/1 -H "Authorization: Bearer $TOKEN"
 ```
+
+Unauthenticated requests return **401**.
 
 ## Incident analysis (Milestone 5)
 
@@ -132,23 +175,29 @@ Browser → backoffice :3001 /api/incidents/*
 
 ## Manual test
 
+Requires a bearer token (see [Authentication](#authentication-milestone-7)):
+
 ```bash
 curl -X POST http://localhost:8000/api/incidents/analyze \
+  -H "Authorization: Bearer $TOKEN" \
   -F "file=@../../scripts/incidents.csv"
 
-curl -OJ http://localhost:8000/api/incidents/results/export
+curl -OJ http://localhost:8000/api/incidents/results/export \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Expected totals for `scripts/incidents.csv`: 100 total, 94 valid, 6 invalid, average satisfaction 3.58.
 
-## Project layout (M6 target)
+## Project layout
 
 ```text
 services/api/
-  app/main.py          ← FastAPI app (incidents + suppliers)
+  app/main.py          ← FastAPI app (auth, incidents, suppliers)
+  auth/                ← JWT auth module (M7)
   models.py            ← Supplier Pydantic models
-  database.py          ← TinyDB initialisation
+  database.py          ← Supplier TinyDB initialisation
   seed.py              ← Initial supplier data (`uv run seed`)
-  routes/suppliers.py  ← Supplier REST endpoints
-  suppliers.json       ← TinyDB file (gitignored, created by seed)
+  routes/              ← auth, users, profiles, suppliers
+  auth.json            ← Auth TinyDB file (gitignored)
+  suppliers.json       ← Supplier TinyDB file (gitignored)
 ```
