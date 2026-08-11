@@ -12,7 +12,7 @@
 ├── milestones/           # Programme requirements (read-only unless approved)
 ├── src/                  # M2 TypeScript utilities and types
 ├── scripts/              # Python helper scripts (M5 incident analysis)
-├── services/api/         # FastAPI internal API (M5 incidents, M6 suppliers)
+├── services/api/         # FastAPI internal API (M5 incidents, M6 suppliers, M7 auth)
 ├── pyproject.toml        # Python dependencies (uv)
 ├── uv.lock               # Locked Python dependency versions
 ├── tests/utils/          # Vitest suites and shared fixtures
@@ -29,7 +29,7 @@
 | --- | --- |
 | Root / M2 | TypeScript, Vitest, `concurrently`, `src/utility-registry.ts` |
 | `scripts/` (M5) | Python 3.12+, [uv](https://docs.astral.sh/uv/), pandas |
-| `services/api/` (M5–M6) | Python 3.12+, FastAPI, uvicorn, pandas, TinyDB (M6) |
+| `services/api/` (M5–M7) | Python 3.12+, FastAPI, uvicorn, pandas, TinyDB (M6), PyJWT + libpass (M7) |
 | All `uis/*` | Next.js 16, React 19, Tailwind CSS v4 |
 
 ## Architectural decisions
@@ -41,6 +41,7 @@
 5. **No external state libraries** in Next.js apps — React hooks only.
 6. **M5 incident analysis** — business rules in `services/api/app/incidents/analysis.py`; backoffice proxies via `app/api/incidents/` route handlers; client uses same-origin `/api/incidents/*`.
 7. **M6 supplier directory** — Pydantic models + TinyDB in `services/api/`; REST at `/suppliers`; backoffice proxies via `app/api/suppliers/`; seed with `uv run --directory services/api seed`.
+8. **M7 authentication** — Users + profiles in TinyDB (`auth.json`); JWT bearer tokens (PyJWT HS256); libpass bcrypt; `JWT_SECRET` required via `services/api/.env`; supplier and incident routes require auth; backoffice BFF token forwarding is a follow-up milestone.
 
 ## Technical constraints
 
@@ -65,8 +66,8 @@ npm run lint:apps
 uv sync
 uv run python scripts/analyze.py scripts/incidents.csv
 
-# HealthCore API (M5–M6)
-cd services/api && uv sync && uv run seed && uv run uvicorn app.main:app --reload --port 8000
+# HealthCore API (M5–M7)
+cd services/api && uv sync && cp .env.example .env && uv run seed && uv run --env-file .env uvicorn app.main:app --reload --port 8000
 npm run dev:api
 uv run --directory services/api seed   # from repo root
 ```

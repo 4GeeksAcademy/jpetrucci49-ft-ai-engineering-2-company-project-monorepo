@@ -1,95 +1,99 @@
-# HealthCore Operations
+# HealthCore Operations Backoffice
 
-Internal HealthCore Digital dashboard surfacing Milestone 2 operational reporting utilities, Milestone 5 patient incident analysis, and Milestone 6 supplier directory.
+Internal dashboard: M2 operational utilities, M5 incident analysis, M6 supplier directory.
 
 ## Stack
 
-- Next.js 16 (App Router)
-- React 19 + TypeScript
-- Tailwind CSS v4
-- Imports `@healthcore/utils` from `../../src/utils` (not copied)
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · `@healthcore/utils` from `../../src/utils`
 
 ## Setup
 
-From the repository root (recommended):
+From the repo root (recommended):
 
 ```bash
 npm install
-cd services/api && uv sync && uv run seed && cd ../..
+cd services/api && uv sync && cp .env.example .env && uv run seed && cd ../..
 npm run dev
 ```
 
-The seed step loads 15 suppliers into TinyDB for `/suppliers`. It is idempotent — `0 inserted` with `15 total` means data is already present.
+Set `JWT_SECRET` in `services/api/.env`. Seed is idempotent — `0 inserted` with `15 total` means suppliers are already loaded.
 
-This app only, from `uis/backoffice/`:
+This app only:
 
 ```bash
 npm install
-cp .env.example .env.local   # optional — custom FastAPI proxy URLs
+cp .env.example .env   # cross-app nav URLs + FastAPI BFF proxy targets
 npm run dev -- -p 3001
 ```
 
-Ensure the API is running (`npm run dev:api` from repo root, or include it via `npm run dev`).
+Ensure the API is running (`npm run dev:api` or full `npm run dev`).
 
 ## Routes
 
-| Route | Purpose |
-| --- | --- |
-| `/` | Operations dashboard (billing, clinical, CME) |
-| `/utilities` | M2 utility tester |
-| `/incidents` | Patient incident CSV upload and analysis (M5) |
-| `/suppliers` | Supplier directory — browse, filter, register, update rate/status (M6) |
+| Route | Milestone | Purpose |
+| --- | --- | --- |
+| `/` | M2 | Operations dashboard (billing, clinical, CME) |
+| `/utilities` | M2 | Utility function manual runner |
+| `/incidents` | M5 | Patient incident CSV upload and analysis |
+| `/suppliers` | M6 | Supplier directory — browse, filter, register, rate/status |
 
-## Incident analysis (M5)
+## BFF proxy pattern
 
-The browser calls same-origin `/api/incidents/*` routes. Next.js proxies those requests server-side to FastAPI (`INCIDENTS_API_URL`, default `http://127.0.0.1:8000`). This avoids CORS and remote-dev port-forwarding issues.
+The browser calls same-origin `/api/*` routes. Next.js proxies server-side to FastAPI at `http://127.0.0.1:8000` — no direct browser access to port 8000, avoiding CORS and Codespaces port-forwarding issues.
+
+| Env var | Default | Used by |
+| --- | --- | --- |
+| `INCIDENTS_API_URL` | `http://127.0.0.1:8000` | `/api/incidents/*` |
+| `SUPPLIERS_API_URL` | `http://127.0.0.1:8000` | `/api/suppliers/*` |
+
+### M7 auth note
+
+Supplier and incident API routes now require JWT auth. The BFF does **not** forward `Authorization` headers yet — those pages may return **401** until a follow-up milestone. Test auth directly via [`services/api/README.md`](../../services/api/README.md) and `/docs`.
+
+## Feature reference
+
+### Incidents (M5)
 
 | File | Role |
 | --- | --- |
 | `lib/api/incidents.ts` | Client fetch helpers |
-| `lib/api/incidents-server.ts` | Server-only proxy utilities |
-| `app/api/incidents/*/route.ts` | BFF route handlers |
-| `components/incidents/` | Upload UI and results panels |
-| `types/incidents.ts` | API response types |
+| `lib/api/incidents-server.ts` | Server proxy utilities |
+| `app/api/incidents/*/route.ts` | BFF handlers |
+| `components/incidents/` | Upload UI and results |
 
 Test CSV: `scripts/incidents.csv`.
 
-## Supplier directory (M6)
-
-The browser calls same-origin `/api/suppliers/*` routes. Next.js proxies to FastAPI (`SUPPLIERS_API_URL`, default `http://127.0.0.1:8000`).
+### Suppliers (M6)
 
 | File | Role |
 | --- | --- |
 | `lib/api/suppliers.ts` | Client fetch helpers |
-| `lib/api/suppliers-server.ts` | Server-only proxy utilities |
-| `app/api/suppliers/**/route.ts` | BFF route handlers (list, create, rate, status; DELETE proxied for API use only) |
-| `components/suppliers/` | Directory page, table, filters, registration form |
-| `types/suppliers.ts` | API types and category labels |
+| `lib/api/suppliers-server.ts` | Server proxy utilities |
+| `app/api/suppliers/**/route.ts` | BFF handlers |
+| `components/suppliers/` | Directory, filters, registration |
 
-**Before testing:** run `uv run --directory services/api seed` (or `uv run seed` from `services/api/`). Spec: `specs/06_SPECS_FRONTEND.md`.
+- Filters sync to URL query strings (`?country=&category=`)
+- **Register new supplier** reveals form above the table
+- Click-to-edit monthly rate with explicit Save
+- Suspend / activate only — no delete in UI (per `context/06_CONTEXT.md`)
 
-UI highlights:
+Spec: `specs/06_SPECS_FRONTEND.md`.
 
-- Filters by country and category (client refetch, no page reload)
-- **Register new supplier** button reveals the registration form above the table
-- Click-to-edit monthly rate with explicit Save; list sorted by name
-- Suspend / activate per row (suppliers are retained for audit history — no delete action in the UI)
+## Dashboard sections (M2)
 
-## Dashboard sections
-
-| Section | Owner | M2 functions |
+| Section | Owner | Functions |
 | --- | --- | --- |
 | Revenue Cycle & Billing | Tom Callahan | `calculateDenialRate`, `denialRateByPayer`, `flagHighDenialPayers` |
 | Clinical Operations | Dr. Marcus Reid | `noShowRateByLocation`, `flagHighNoShowLocations` |
 | People & Workforce | Diane Foster | `generateCMEReport`, `getCliniciansAtRisk` |
 
-Sample data loaded from `@healthcore/fixtures` (`tests/utils/fixtures.ts`).
+Sample data: `@healthcore/fixtures` (`tests/utils/fixtures.ts`).
 
 ## Scripts
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Development server |
+| `npm run dev` | Development server (port 3001) |
 | `npm run build` | Production build |
 | `npm run start` | Run production server |
 | `npm run lint` | ESLint |

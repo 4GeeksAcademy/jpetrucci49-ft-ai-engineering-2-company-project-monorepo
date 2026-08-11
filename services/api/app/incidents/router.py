@@ -1,6 +1,10 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
+from auth.dependencies import get_current_user
+from auth.models import UserPublic
 from app.incidents.analysis import (
     analyze,
     load_incidents_from_bytes,
@@ -14,7 +18,10 @@ router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
 @router.post("/analyze", response_model=AnalysisResult)
-async def analyze_incidents(file: UploadFile = File(..., description="UTF-8 CSV of patient incidents")) -> AnalysisResult:
+async def analyze_incidents(
+    _: Annotated[UserPublic, Depends(get_current_user)],
+    file: UploadFile = File(..., description="UTF-8 CSV of patient incidents"),
+) -> AnalysisResult:
     """Upload a patient incident CSV and receive an aggregate analysis summary."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file uploaded.")
@@ -55,7 +62,9 @@ async def analyze_incidents(file: UploadFile = File(..., description="UTF-8 CSV 
 
 
 @router.get("/results/export")
-async def export_results() -> Response:
+async def export_results(
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Response:
     """Download the last analysis as CSV (aggregate metrics only)."""
     stored = get_last_analysis()
     if stored is None:

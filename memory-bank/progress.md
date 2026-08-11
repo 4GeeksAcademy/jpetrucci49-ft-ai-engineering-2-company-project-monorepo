@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 6 complete — supplier directory API + backoffice UI_
+_Last updated: Milestone 7 complete — JWT authentication and route protection_
 
 ## Completed
 
@@ -68,6 +68,15 @@ _Last updated: Milestone 6 complete — supplier directory API + backoffice UI_
 - [x] Spec: `specs/06_SPECS_FRONTEND.md`
 - [x] `uis/backoffice/app/suppliers` — directory page with filters, collapsible registration form, rate/status controls (suspend only — no delete in UI)
 - [x] BFF routes at `app/api/suppliers/*`; nav link in `BackofficeShell`
+
+### Milestone 7 — Authentication (AUTH-01)
+
+- [x] Spec: `specs/07_SPECS.md`
+- [x] `services/api/auth/` — models, TinyDB (`auth.json`), libpass bcrypt, PyJWT HS256
+- [x] Routes: `POST /auth/login`, `GET /auth/me`, `/users` CRUD, `/profiles/me`
+- [x] `get_current_user`, `require_admin`, `require_self_or_admin` dependencies
+- [x] Protected all supplier and incident handlers; public only login + registration + docs
+- [x] `JWT_SECRET` required at startup; documented in `.env.example`
 
 ## In progress
 

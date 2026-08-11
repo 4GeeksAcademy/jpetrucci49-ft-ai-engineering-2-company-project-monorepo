@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
+from auth.dependencies import get_current_user
+from auth.models import UserPublic
 from database import get_suppliers_table
 from models import (
     VALID_CATEGORIES,
@@ -61,13 +63,17 @@ def _apply_filters(
 
 
 @router.post("", response_model=Supplier, status_code=status.HTTP_201_CREATED)
-def create_supplier(payload: SupplierCreate) -> Supplier:
+def create_supplier(
+    payload: SupplierCreate,
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Supplier:
     """Register a new supplier."""
     return _insert_supplier(payload)
 
 
 @router.get("", response_model=list[Supplier])
 def list_suppliers(
+    _: Annotated[UserPublic, Depends(get_current_user)],
     country: SupplierCountry | None = None,
     category: Annotated[str | None, Query(description="Filter by product/service category")] = None,
 ) -> list[Supplier]:
@@ -82,13 +88,20 @@ def list_suppliers(
 
 
 @router.get("/{supplier_id}", response_model=Supplier)
-def get_supplier(supplier_id: int) -> Supplier:
+def get_supplier(
+    supplier_id: int,
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Supplier:
     """Return one supplier by TinyDB id."""
     return _to_supplier(_get_document_or_404(supplier_id))
 
 
 @router.patch("/{supplier_id}/rate", response_model=Supplier)
-def update_supplier_rate(supplier_id: int, payload: SupplierRateUpdate) -> Supplier:
+def update_supplier_rate(
+    supplier_id: int,
+    payload: SupplierRateUpdate,
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Supplier:
     """Update monthly rate and record updated_at."""
     table = get_suppliers_table()
     document = _get_document_or_404(supplier_id)
@@ -102,7 +115,11 @@ def update_supplier_rate(supplier_id: int, payload: SupplierRateUpdate) -> Suppl
 
 
 @router.patch("/{supplier_id}/status", response_model=Supplier)
-def update_supplier_status(supplier_id: int, payload: SupplierStatusUpdate) -> Supplier:
+def update_supplier_status(
+    supplier_id: int,
+    payload: SupplierStatusUpdate,
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Supplier:
     """Activate or suspend a supplier without changing updated_at."""
     table = get_suppliers_table()
     document = _get_document_or_404(supplier_id)
@@ -112,7 +129,10 @@ def update_supplier_status(supplier_id: int, payload: SupplierStatusUpdate) -> S
 
 
 @router.delete("/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_supplier(supplier_id: int) -> Response:
+def delete_supplier(
+    supplier_id: int,
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> Response:
     """Remove a supplier from the directory."""
     table = get_suppliers_table()
     if table.get(doc_id=supplier_id) is None:
