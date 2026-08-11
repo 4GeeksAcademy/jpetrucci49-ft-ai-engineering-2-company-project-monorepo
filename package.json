@@ -10,7 +10,7 @@
     "dev:website": "npm run dev --prefix uis/website -- --port 3000",
     "dev:backoffice": "npm run dev --prefix uis/backoffice -- --port 3001",
     "dev:tracker": "npm run dev --prefix uis/talent-pipeline-tracker -- --port 3002",
-    "dev:api": "cd services/api && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:api": "cd services/api && uv run --env-file .env uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
     "build": "npm run build:apps",
     "build:apps": "npm run build --prefix uis/website && npm run build --prefix uis/backoffice && npm run build --prefix uis/talent-pipeline-tracker",
     "start": "concurrently -k -n website,backoffice,tracker -c cyan,magenta,green \"npm run start --prefix uis/website -- --port 3000\" \"npm run start --prefix uis/backoffice -- --port 3001\" \"npm run start --prefix uis/talent-pipeline-tracker -- --port 3002\"",
