@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
-import { parseApiError } from "@healthcore/auth";
-import { setToken } from "@healthcore/auth";
+import { bootstrapAuthSession, isAuthenticated, parseApiError, setToken } from "@healthcore/auth";
 import type { TokenResponse } from "@healthcore/auth";
 
 export function LoginForm() {
@@ -15,6 +14,14 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    bootstrapAuthSession();
+    if (isAuthenticated()) {
+      const next = searchParams.get("next");
+      router.replace(next && next.startsWith("/") ? next : "/");
+    }
+  }, [router, searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

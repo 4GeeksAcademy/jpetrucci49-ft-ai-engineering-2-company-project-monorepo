@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { buildAuthenticatedAppUrl } from "@healthcore/auth";
 import { appUrls, crossAppNav, crossAppNavLabels } from "@healthcore/navigation";
 
 const navItems = [
@@ -13,8 +14,8 @@ const navItems = [
 ] as const;
 
 const crossAppLinks = [
-  { href: appUrls.website, label: crossAppNavLabels.publicSite },
-  { href: appUrls.tracker, label: crossAppNavLabels.talentPipeline },
+  { href: appUrls.website, label: crossAppNavLabels.publicSite, authenticated: false },
+  { href: appUrls.tracker, label: crossAppNavLabels.talentPipeline, authenticated: true },
 ] as const;
 
 export function BackofficeShell({ children }: { children: React.ReactNode }) {
@@ -36,7 +37,7 @@ export function BackofficeShell({ children }: { children: React.ReactNode }) {
             {crossAppLinks.map((item) => (
               <a
                 key={item.href}
-                href={item.href}
+                href={item.authenticated ? buildAuthenticatedAppUrl(item.href) : item.href}
                 className="text-slate-400 hover:text-white hover:underline"
               >
                 {item.label}

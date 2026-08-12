@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { isAuthenticated } from "@healthcore/auth";
+import { bootstrapAuthSession, isAuthenticated } from "@healthcore/auth";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,6 +11,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    bootstrapAuthSession();
+
     if (!isAuthenticated()) {
       const next = encodeURIComponent(pathname);
       router.replace(`/login?next=${next}`);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useFilterReset } from "@/components/layout/FilterResetProvider";
+import { buildAuthenticatedAppUrl } from "@healthcore/auth";
 import {
   appUrls,
   backofficeUtilitiesUrl,
@@ -11,8 +12,12 @@ import {
 } from "@healthcore/navigation";
 
 const crossAppLinks = [
-  { href: appUrls.website, label: crossAppNavLabels.publicSite },
-  { href: backofficeUtilitiesUrl(appUrls.backoffice), label: crossAppNavLabels.utilities },
+  { href: appUrls.website, label: crossAppNavLabels.publicSite, authenticated: false },
+  {
+    href: backofficeUtilitiesUrl(appUrls.backoffice),
+    label: crossAppNavLabels.utilities,
+    authenticated: true,
+  },
 ] as const;
 
 export function AppHeader() {
@@ -52,7 +57,7 @@ export function AppHeader() {
           {crossAppLinks.map((item) => (
             <a
               key={item.href}
-              href={item.href}
+              href={item.authenticated ? buildAuthenticatedAppUrl(item.href) : item.href}
               className="text-slate-600 hover:text-teal-700 hover:underline"
             >
               {item.label}
