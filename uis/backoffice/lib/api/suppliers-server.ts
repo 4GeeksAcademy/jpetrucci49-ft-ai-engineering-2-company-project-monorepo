@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+import { forwardAuthorization } from "@healthcore/api/proxy";
 
 /** Server-only helpers for proxying supplier API requests to FastAPI. */
 
@@ -14,12 +17,15 @@ export function suppliersApiUnavailableResponse(): NextResponse {
 }
 
 export async function proxyToSuppliersApi(
+  request: NextRequest,
   path: string,
   init?: RequestInit
 ): Promise<Response> {
+  const headers = forwardAuthorization(request.headers.get("authorization"), init?.headers);
   return fetch(`${getSuppliersApiOrigin()}${path}`, {
     cache: "no-store",
     ...init,
+    headers,
   });
 }
 

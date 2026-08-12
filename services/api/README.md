@@ -6,7 +6,8 @@ FastAPI service for internal HealthCore Digital tools:
 | --- | --- | --- |
 | M5 | Patient incident CSV analysis | `/incidents` |
 | M6 | Supplier directory (TinyDB) | `/suppliers` |
-| M7 | JWT auth + route protection | — (BFF token forwarding pending) |
+| M7 | JWT auth + route protection | — |
+| M8 | Frontend auth (login, guards, BFF token forward) | `/login`, `/account/profile` |
 
 ## Stack
 
@@ -46,7 +47,7 @@ Stateless bearer JWT. Public routes: `POST /users`, `POST /auth/login`, and docs
 | `GET` | `/users` | Admin |
 | `GET/PUT/DELETE` | `/users/{id}` | Self or admin |
 
-The backoffice BFF does not send tokens yet — expect **401** from `/api/suppliers/*` and `/api/incidents/*` until a follow-up milestone.
+All supplier and incident endpoints require a valid token when called on FastAPI directly. Internal apps attach the token via `authFetch` and the Next.js BFF forwards the `Authorization` header.
 
 ### Auth smoke test
 

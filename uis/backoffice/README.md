@@ -45,10 +45,9 @@ The browser calls same-origin `/api/*` routes. Next.js proxies server-side to Fa
 | --- | --- | --- |
 | `INCIDENTS_API_URL` | `http://127.0.0.1:8000` | `/api/incidents/*` |
 | `SUPPLIERS_API_URL` | `http://127.0.0.1:8000` | `/api/suppliers/*` |
+| `AUTH_API_URL` | `http://127.0.0.1:8000` | `/api/auth/*`, `/api/users`, `/api/profiles/*` |
 
-### M7 auth note
-
-Supplier and incident API routes now require JWT auth. The BFF does **not** forward `Authorization` headers yet — those pages may return **401** until a follow-up milestone. Test auth directly via [`services/api/README.md`](../../services/api/README.md) and `/docs`.
+The browser calls same-origin `/api/*` routes. Next.js proxies server-side to FastAPI and forwards the bearer token from `localStorage` via `authFetch`.
 
 ## Feature reference
 

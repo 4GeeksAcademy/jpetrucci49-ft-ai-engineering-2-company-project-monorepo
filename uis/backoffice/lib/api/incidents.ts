@@ -1,3 +1,4 @@
+import { authFetch } from "@healthcore/auth";
 import { AnalysisResult, IncidentsApiError } from "@/types/incidents";
 
 /** Same-origin BFF routes — proxied server-side to FastAPI (see app/api/incidents/). */
@@ -21,7 +22,7 @@ export async function analyzeIncidents(file: File): Promise<AnalysisResult> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_PREFIX}/analyze`, {
+  const response = await authFetch(`${API_PREFIX}/analyze`, {
     method: "POST",
     body: formData,
   });
@@ -35,7 +36,7 @@ export async function analyzeIncidents(file: File): Promise<AnalysisResult> {
 }
 
 export async function exportIncidentResults(): Promise<Blob> {
-  const response = await fetch(`${API_PREFIX}/results/export`);
+  const response = await authFetch(`${API_PREFIX}/results/export`);
 
   if (!response.ok) {
     const message = await parseErrorMessage(response);

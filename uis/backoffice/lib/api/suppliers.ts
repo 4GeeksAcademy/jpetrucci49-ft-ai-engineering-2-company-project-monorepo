@@ -1,3 +1,4 @@
+import { authFetch } from "@healthcore/auth";
 import {
   Supplier,
   SupplierCreatePayload,
@@ -32,7 +33,7 @@ function buildQuery(filters?: SupplierListFilters): string {
 }
 
 export async function fetchSuppliers(filters?: SupplierListFilters): Promise<Supplier[]> {
-  const response = await fetch(`${API_PREFIX}${buildQuery(filters)}`);
+  const response = await authFetch(`${API_PREFIX}${buildQuery(filters)}`);
 
   if (!response.ok) {
     const message = await parseErrorMessage(response);
@@ -43,7 +44,7 @@ export async function fetchSuppliers(filters?: SupplierListFilters): Promise<Sup
 }
 
 export async function createSupplier(payload: SupplierCreatePayload): Promise<Supplier> {
-  const response = await fetch(API_PREFIX, {
+  const response = await authFetch(API_PREFIX, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -61,7 +62,7 @@ export async function updateSupplierRate(
   id: number,
   payload: SupplierRateUpdatePayload
 ): Promise<Supplier> {
-  const response = await fetch(`${API_PREFIX}/${id}/rate`, {
+  const response = await authFetch(`${API_PREFIX}/${id}/rate`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -79,7 +80,7 @@ export async function updateSupplierStatus(
   id: number,
   payload: SupplierStatusUpdatePayload
 ): Promise<Supplier> {
-  const response = await fetch(`${API_PREFIX}/${id}/status`, {
+  const response = await authFetch(`${API_PREFIX}/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

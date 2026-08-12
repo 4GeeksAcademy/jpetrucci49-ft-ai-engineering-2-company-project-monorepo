@@ -8,10 +8,10 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const response = await proxyToSuppliersApi(`/suppliers/${id}`, { method: "DELETE" });
+    const response = await proxyToSuppliersApi(request, `/suppliers/${id}`, { method: "DELETE" });
 
     if (response.status === 204) {
       return new NextResponse(null, { status: 204 });

@@ -41,7 +41,8 @@
 5. **No external state libraries** in Next.js apps — React hooks only.
 6. **M5 incident analysis** — business rules in `services/api/app/incidents/analysis.py`; backoffice proxies via `app/api/incidents/` route handlers; client uses same-origin `/api/incidents/*`.
 7. **M6 supplier directory** — Pydantic models + TinyDB in `services/api/`; REST at `/suppliers`; backoffice proxies via `app/api/suppliers/`; seed with `uv run --directory services/api seed`.
-8. **M7 authentication** — Users + profiles in TinyDB (`auth.json`); JWT bearer tokens (PyJWT HS256); libpass bcrypt; `JWT_SECRET` required via `services/api/.env`; supplier and incident routes require auth; backoffice BFF token forwarding is a follow-up milestone.
+8. **M7 authentication** — Users + profiles in TinyDB (`auth.json`); JWT bearer tokens (PyJWT HS256); libpass bcrypt; `JWT_SECRET` required via `services/api/.env`; supplier and incident routes require auth.
+9. **M8 frontend auth** — `localStorage` token; `packages/shared/auth/` + `authFetch`; BFF forwards `Authorization`; internal apps guard routes except `/login` and `/register`; website stays public.
 
 ## Technical constraints
 

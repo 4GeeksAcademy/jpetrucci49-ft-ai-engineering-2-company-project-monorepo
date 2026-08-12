@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.text();
-    const response = await proxyToSuppliersApi(`/suppliers/${id}/status`, {
+    const response = await proxyToSuppliersApi(request, `/suppliers/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body,

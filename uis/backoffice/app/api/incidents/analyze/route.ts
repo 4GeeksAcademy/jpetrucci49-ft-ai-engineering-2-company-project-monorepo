@@ -8,7 +8,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const response = await proxyToIncidentsApi("/api/incidents/analyze", {
+    const response = await proxyToIncidentsApi(request, "/api/incidents/analyze", {
       method: "POST",
       body: formData,
     });

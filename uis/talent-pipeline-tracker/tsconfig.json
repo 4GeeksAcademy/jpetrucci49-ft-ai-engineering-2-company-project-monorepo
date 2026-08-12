@@ -20,6 +20,9 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@healthcore/auth": ["../../packages/shared/auth/index.ts"],
+      "@healthcore/auth/*": ["../../packages/shared/auth/*"],
+      "@healthcore/api/*": ["../../packages/shared/api/*"],
       "@healthcore/navigation": ["../../packages/shared/navigation/index.ts"]
     }
   },
@@ -29,7 +32,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "../../packages/shared/auth/**/*.ts",
+    "../../packages/shared/api/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
