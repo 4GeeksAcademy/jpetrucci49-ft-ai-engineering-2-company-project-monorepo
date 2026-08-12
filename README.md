@@ -18,6 +18,19 @@ npm run dev
 
 Set `JWT_SECRET` in `services/api/.env` (required for the API). The seed step is idempotent — safe to run again.
 
+### Testing admin-only API behaviour
+
+There is no admin UI for promoting users. New registrations always get `"role": "user"`. Admin-only endpoints (for example `GET /users`) are documented in [`specs/07_SPECS.md`](specs/07_SPECS.md). To exercise them locally:
+
+1. **Start the stack** — `npm run dev` (API on `:8000`, internal apps on `:3001` / `:3002`).
+2. **Register a user** — open http://localhost:3001/register (or `:3002/register`), complete the form, and confirm you can reach `/account/profile`.
+3. **Stop the application** — press Ctrl+C in the terminal running `npm run dev`. The API must be stopped before editing the auth database.
+4. **Promote the user to admin** — edit `services/api/auth.json`. Under `users`, find the entry for your email and set `"role": "admin"` (allowed values: `admin`, `manager`, `user`).
+5. **Restart** — run `npm run dev` again.
+6. **Verify** — log in with the same account (or refresh an authenticated page). `/account/profile` should show role **admin**; `GET /users` via http://localhost:8000/docs or curl should return **200** instead of **403**.
+
+The bearer token identifies the user only; role is read from TinyDB on each request, so a fresh login is not strictly required after the edit — but restarting ensures the file change is picked up cleanly.
+
 | Service | URL | Purpose |
 | --- | --- | --- |
 | Application hub | http://localhost:4173 | Links to all apps |
