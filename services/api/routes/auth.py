@@ -8,14 +8,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from auth.dependencies import get_current_user
-from auth.models import AuthMe, Token, UserPublic
+from auth.models import (
+    AuthMe,
+    ChangePasswordRequest,
+    ChangePasswordResponse,
+    ForgotPasswordRequest,
+    MessageResponse,
+    ResetPasswordRequest,
+    Token,
+    UserPublic,
+)
 from auth.security import create_access_token, verify_password
+from auth.services import password_reset as password_reset_service
 from auth.services import profiles as profile_service
 from auth.services import users as user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 LOGIN_FAILED_MESSAGE = "Incorrect email or password."
+CHANGE_PASSWORD_SUCCESS_MESSAGE = "Password updated successfully."
 
 
 @router.post("/login", response_model=Token)
@@ -49,3 +60,40 @@ def read_current_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found.")
 
     return AuthMe(email=current_user.email, role=current_user.role, profile=profile)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(payload: ForgotPasswordRequest) -> MessageResponse:
+    password_reset_service.request_password_reset(payload.email)
+    return MessageResponse(message=password_reset_service.FORGOT_PASSWORD_MESSAGE)
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(payload: ResetPasswordRequest) -> MessageResponse:
+    try:
+        password_reset_service.reset_password(payload.token, payload.new_password)
+    except password_reset_service.InvalidResetTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return MessageResponse(message=password_reset_service.RESET_SUCCESS_MESSAGE)
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: Annotated[UserPublic, Depends(get_current_user)],
+) -> ChangePasswordResponse:
+    try:
+        user_service.change_password(
+            current_user.id,
+            payload.current_password,
+            payload.new_password,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return ChangePasswordResponse(message=CHANGE_PASSWORD_SUCCESS_MESSAGE)

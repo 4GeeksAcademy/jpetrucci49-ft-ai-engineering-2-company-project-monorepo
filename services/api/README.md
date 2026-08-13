@@ -8,6 +8,7 @@ FastAPI service for internal HealthCore Digital tools:
 | M6 | Supplier directory (TinyDB) | `/suppliers` |
 | M7 | JWT auth + route protection | — |
 | M8 | Frontend auth (login, guards, BFF token forward) | `/login`, `/account/profile` |
+| M9 | Password reset + change (API) | `/forgot-password`, `/reset-password`, `/account/change-password` (frontend in M9 phase 2) |
 
 ## Stack
 
@@ -32,16 +33,19 @@ From the repo root: `npm run dev:api` (loads `services/api/.env`).
 
 OpenAPI docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-The API fails fast at startup if `JWT_SECRET` is missing.
+The API fails fast at startup if `JWT_SECRET` is missing, or if password-reset / email env vars are incomplete (see below).
 
 ## Authentication (M7)
 
-Stateless bearer JWT. Public routes: `POST /users`, `POST /auth/login`, and docs. Everything else requires `Authorization: Bearer <token>`.
+Stateless bearer JWT. Public routes: `POST /users`, `POST /auth/login`, password recovery routes (M9), and docs. Everything else requires `Authorization: Bearer <token>`.
 
 | Method | Path | Access |
 | --- | --- | --- |
 | `POST` | `/users` | Public — register user + profile |
 | `POST` | `/auth/login` | Public — OAuth2 form (`username` = email) |
+| `POST` | `/auth/forgot-password` | Public — request reset link (always **200**) |
+| `POST` | `/auth/reset-password` | Public — set new password with reset token |
+| `POST` | `/auth/change-password` | Authenticated — change password with current password |
 | `GET` | `/auth/me` | Authenticated |
 | `GET/PUT` | `/profiles/me` | Owner |
 | `GET` | `/users` | Admin |
@@ -65,6 +69,44 @@ curl -s "$BASE/suppliers" -H "Authorization: Bearer $TOKEN"
 ```
 
 **First admin:** edit `auth.json` while the API is stopped, set `"role": "admin"`, restart. Spec: `specs/07_SPECS.md`.
+
+## Password recovery and change (M9)
+
+Spec: `specs/09_SPECS_BACK.md`.
+
+Reset tokens are opaque, single-use, and stored hashed in TinyDB (`password_reset_tokens` table in `auth.json`). The `/auth/forgot-password` endpoint always returns **200** with the same message — it never reveals whether an email is registered.
+
+### Environment variables
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `RESET_TOKEN_EXPIRE_MINUTES` | No | `30` | Reset link lifetime (15–60) |
+| `PASSWORD_RESET_URL` | **Yes** | — | Frontend reset page, e.g. `http://localhost:3001/reset-password` |
+| `RESEND_API_KEY` | **Yes** | — | [Resend](https://resend.com/) API key |
+| `RESEND_FROM_EMAIL` | **Yes** | — | Verified or onboarding sender |
+
+Create a free [Resend](https://resend.com/) account, copy the API key, and use Resend’s onboarding sender (e.g. `onboarding@resend.dev`) until you verify a custom domain.
+
+### Password reset smoke test
+
+```bash
+BASE=http://127.0.0.1:8000
+
+curl -s -X POST "$BASE/auth/forgot-password" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ops@example.com"}'
+
+# Use token from email:
+curl -s -X POST "$BASE/auth/reset-password" \
+  -H 'Content-Type: application/json' \
+  -d '{"token":"<token-from-email>","new_password":"newsecurepass123"}'
+
+# Change password while logged in:
+curl -s -X POST "$BASE/auth/change-password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"current_password":"newsecurepass123","new_password":"anothersecurepass123"}'
+```
 
 ## Supplier directory (M6)
 
@@ -129,7 +171,7 @@ Browser → backoffice :3001 /api/{incidents,suppliers}/*
 ```text
 services/api/
   app/main.py       ← FastAPI app
-  auth/             ← JWT module (M7)
+  auth/             ← JWT module (M7) + password reset (M9)
   routes/           ← auth, users, profiles, suppliers
   app/incidents/    ← analysis module + router (M5)
   models.py         ← Supplier Pydantic models

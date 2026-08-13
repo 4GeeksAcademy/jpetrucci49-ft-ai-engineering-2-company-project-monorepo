@@ -52,15 +52,15 @@ services/api/
     email/
       __init__.py
       base.py                      ← EmailSender protocol / shared types
-      resend_sender.py             ← Resend implementation (if chosen)
-      sendgrid_sender.py           ← SendGrid implementation (if chosen)
+      templates.py                 ← shared HTML + plain-text bodies
+      resend_sender.py             ← Resend implementation
   routes/
     auth.py                        ← add forgot / reset / change-password handlers
   .env.example                     ← document new env vars
-  pyproject.toml                   ← add resend OR sendgrid dependency
+  pyproject.toml                   ← add resend dependency
 ```
 
-Pick **one** email provider and implement a single sender module. Do not ship both in production code — choose Resend or SendGrid and document the choice in `services/api/README.md`.
+Email delivery uses **Resend** only. Document setup in `services/api/README.md`.
 
 ---
 
@@ -73,20 +73,16 @@ Pick **one** email provider and implement a single sender module. Do not ship bo
 | Reset tokens | Cryptographically random opaque string (`secrets.token_urlsafe(32)` or equivalent) |
 | Token storage | TinyDB table `password_reset_tokens` — store **hash only**, never the raw token |
 | Token hash | SHA-256 hex digest of the raw token (constant-time compare on lookup) |
-| Email | **Resend** (`resend` SDK) **or** **SendGrid** (`sendgrid` SDK) — free tier sufficient for dev |
+| Email | **Resend** (`resend` SDK) — free tier sufficient for dev |
 | Access tokens | Unchanged — PyJWT bearer tokens from M7 |
 
-Add exactly one email SDK to `pyproject.toml`. Example:
+Add to `pyproject.toml`:
 
 ```toml
-# Resend
 "resend>=2.0,<3",
-
-# OR SendGrid
-"sendgrid>=6.11,<7",
 ```
 
-**Why Resend or SendGrid?** Both support development sending without a custom domain (Resend onboarding sender; SendGrid trial/sandbox or verified single sender — confirm current provider docs). Alternatives that require DNS domain verification are out of scope for this exercise.
+Resend supports development sending without a custom domain via its onboarding sender — see [Resend docs](https://resend.com/docs).
 
 ---
 
@@ -99,16 +95,13 @@ Document every new variable in `services/api/.env.example`. **Never hardcode API
 | `JWT_SECRET` | **Yes** | — | Existing — access token signing |
 | `RESET_TOKEN_EXPIRE_MINUTES` | No | `30` | Reset link lifetime (**15–60** allowed range; validate at startup) |
 | `PASSWORD_RESET_URL` | **Yes** | — | Frontend reset page base URL **without** query string, e.g. `http://localhost:3001/reset-password` — append `?token=<raw_token>` when building the email link |
-| `EMAIL_PROVIDER` | No | `resend` | `resend` or `sendgrid` — selects sender implementation |
-| `RESEND_API_KEY` | If Resend | — | Resend API key |
-| `RESEND_FROM_EMAIL` | If Resend | — | Verified/onboarding sender address |
-| `SENDGRID_API_KEY` | If SendGrid | — | SendGrid API key |
-| `SENDGRID_FROM_EMAIL` | If SendGrid | — | Verified sender address |
+| `RESEND_API_KEY` | **Yes** | — | Resend API key |
+| `RESEND_FROM_EMAIL` | **Yes** | — | Verified/onboarding sender address |
 
 Startup behaviour:
 
 - Fail fast if `PASSWORD_RESET_URL` is missing in non-test environments.
-- Fail fast if the selected provider’s API key and `*_FROM_EMAIL` are missing.
+- Fail fast if `RESEND_API_KEY` or `RESEND_FROM_EMAIL` is missing.
 - Reject `RESET_TOKEN_EXPIRE_MINUTES` outside **15–60** (inclusive).
 
 ---
@@ -273,14 +266,14 @@ Do **not** accept `change-password` via reset token — that flow uses `reset-pa
 
 ### 10.1 Provider integration
 
-Implement one module under `auth/email/` that exposes a single function, e.g.:
+Implement `auth/email/resend_sender.py` exposing:
 
 ```python
 def send_password_reset_email(*, to_email: str, reset_link: str, expires_minutes: int) -> None:
     ...
 ```
 
-Select implementation at runtime from `EMAIL_PROVIDER` (or infer from which API key is set — document the chosen approach).
+Re-export from `auth/email/__init__.py` for use by the password reset service.
 
 ### 10.2 Email content requirements
 
@@ -294,9 +287,7 @@ Select implementation at runtime from `EMAIL_PROVIDER` (or infer from which API 
 
 ### 10.3 Development notes
 
-- **Resend:** use onboarding sender during dev; see [Resend docs](https://resend.com/docs).
-- **SendGrid:** use trial/sandbox or a verified single sender; see [SendGrid docs](https://docs.sendgrid.com/).
-- Document setup steps in `services/api/README.md` (API key, from-address, test curl).
+Create a free [Resend](https://resend.com/) account, copy the API key, and use the onboarding sender (e.g. `onboarding@resend.dev`) during development.
 
 ---
 
@@ -404,7 +395,7 @@ curl -s -X POST "$BASE/auth/reset-password" \
 
 ### Email
 
-- [ ] Integrated **Resend** or **SendGrid**
+- [ ] Integrated **Resend** for transactional email
 - [ ] Email includes reset link and is readable on mobile (HTML + plain text)
 - [ ] API key and sender address loaded from environment variables only
 

@@ -1,7 +1,9 @@
-"""Password hashing and JWT helpers."""
+"""Password hashing, JWT helpers, and reset-token utilities."""
 
 from __future__ import annotations
 
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -34,11 +36,21 @@ def decode_access_token(token: str) -> int:
     return int(payload["sub"])
 
 
+def generate_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode()).hexdigest()
+
+
 __all__ = [
     "ALGORITHM",
     "InvalidTokenError",
     "create_access_token",
     "decode_access_token",
+    "generate_reset_token",
     "hash_password",
+    "hash_reset_token",
     "verify_password",
 ]
