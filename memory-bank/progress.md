@@ -96,10 +96,11 @@ _Last updated: Milestone 8 complete — frontend auth flows and route protection
 - [x] Resend email integration for password reset links
 - [x] Env vars documented in `services/api/.env.example` and README
 
-**Phase 2 — Frontend** (pending)
+**Phase 2 — Frontend**
 
-- [ ] Spec: `specs/09_SPECS_FRONT.md`
-- [ ] `/forgot-password`, `/reset-password`, `/account/change-password` in internal apps
+- [x] Spec: `specs/09_SPECS_FRONT.md`
+- [x] `/forgot-password`, `/reset-password`, `/account/change-password` in internal apps
+- [x] BFF proxies; login forgot link; profile change-password link
 
 ## In progress
 
