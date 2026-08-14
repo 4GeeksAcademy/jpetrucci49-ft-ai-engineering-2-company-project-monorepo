@@ -31,6 +31,37 @@ There is no admin UI for promoting users. New registrations always get `"role": 
 
 The bearer token identifies the user only; role is read from TinyDB on each request, so a fresh login is not strictly required after the edit — but restarting ensures the file change is picked up cleanly.
 
+### Testing password recovery and change (M9)
+
+Specs: [`specs/09_SPECS_BACK.md`](specs/09_SPECS_BACK.md) (API), [`specs/09_SPECS_FRONT.md`](specs/09_SPECS_FRONT.md) (UI).
+
+**Prerequisites** — in `services/api/.env`:
+
+```bash
+JWT_SECRET=...
+PASSWORD_RESET_URL=http://localhost:3001/reset-password   # or :3002 for tracker-only
+RESET_TOKEN_EXPIRE_MINUTES=30
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=onboarding@resend.dev   # or your verified Resend sender
+```
+
+Restart the API after editing `.env`. On Resend’s free tier, reset emails usually deliver only to the address on your Resend account unless you have verified a domain.
+
+#### UI smoke test (backoffice `:3001` or tracker `:3002`)
+
+1. **Register or log in** — http://localhost:3001/register
+2. **Forgot password** — `/login` → “Forgot your password?” → submit a registered email → confirmation appears and the form disables (same message for unknown emails)
+3. **Reset via email** — open the link from your inbox → `/reset-password?token=...` → set a new password → redirect to `/login` with a success message
+4. **Sign in** — use the new password
+5. **Change password (logged in)** — `/account/profile` → “Change password” → `/account/change-password` → submit current + new password → success message; sign in again with the new password
+6. **Reuse reset token** — repeat step 2 and complete reset once; submitting the same email link again should show an error and a link back to `/forgot-password`
+
+Repeat on http://localhost:3002 if you use the talent tracker. Set `PASSWORD_RESET_URL` to `http://localhost:3002/reset-password` when testing that app’s email links.
+
+#### API smoke test (curl)
+
+See [`services/api/README.md`](services/api/README.md#password-recovery-and-change-m9) for curl examples against `:8000`.
+
 | Service | URL | Purpose |
 | --- | --- | --- |
 | Application hub | http://localhost:4173 | Links to all apps |
@@ -40,7 +71,7 @@ The bearer token identifies the user only; role is read from TinyDB on each requ
 | Incident analysis | http://localhost:3001/incidents | CSV upload + summary (M5) |
 | Supplier directory | http://localhost:3001/suppliers | Browse and manage vendors (M6) |
 | Talent pipeline tracker | http://localhost:3002 | Recruitment pipeline (M3) |
-| HealthCore API | http://localhost:8000 | FastAPI — auth, incidents, suppliers (M5–M7) |
+| HealthCore API | http://localhost:8000 | FastAPI — auth, incidents, suppliers (M5–M9) |
 | API docs | http://localhost:8000/docs | OpenAPI (Swagger) |
 
 ### Individual apps

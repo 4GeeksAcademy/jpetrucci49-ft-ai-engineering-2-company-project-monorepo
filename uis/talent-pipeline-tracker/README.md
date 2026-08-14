@@ -30,3 +30,9 @@ npm run dev
 | Variable | Example |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `https://playground.4geeks.com/tracker/api/v1` |
+
+## Auth and password recovery (M8/M9)
+
+Same auth routes as backoffice: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/account/profile`, `/account/change-password`.
+
+For reset emails to open this app, set `PASSWORD_RESET_URL=http://localhost:3002/reset-password` in `services/api/.env`. Testing steps: root [`README.md`](../../README.md#testing-password-recovery-and-change-m9).

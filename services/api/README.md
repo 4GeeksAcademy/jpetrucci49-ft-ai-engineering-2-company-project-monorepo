@@ -8,7 +8,7 @@ FastAPI service for internal HealthCore Digital tools:
 | M6 | Supplier directory (TinyDB) | `/suppliers` |
 | M7 | JWT auth + route protection | — |
 | M8 | Frontend auth (login, guards, BFF token forward) | `/login`, `/account/profile` |
-| M9 | Password reset + change (API) | `/forgot-password`, `/reset-password`, `/account/change-password` (frontend in M9 phase 2) |
+| M9 | Password reset + change | `/forgot-password`, `/reset-password`, `/account/change-password` |
 
 ## Stack
 
@@ -87,26 +87,66 @@ Reset tokens are opaque, single-use, and stored hashed in TinyDB (`password_rese
 
 Create a free [Resend](https://resend.com/) account, copy the API key, and use Resend’s onboarding sender (e.g. `onboarding@resend.dev`) until you verify a custom domain.
 
-### Password reset smoke test
+### Testing
+
+#### API (curl)
 
 ```bash
 BASE=http://127.0.0.1:8000
 
+# Request reset link (always 200 — same body whether or not the email exists)
 curl -s -X POST "$BASE/auth/forgot-password" \
   -H 'Content-Type: application/json' \
   -d '{"email":"ops@example.com"}'
 
-# Use token from email:
+# Invalid email format → 422
+curl -s -w "\nHTTP %{http_code}\n" -X POST "$BASE/auth/forgot-password" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"not-an-email"}'
+
+# Use token from the reset email:
 curl -s -X POST "$BASE/auth/reset-password" \
   -H 'Content-Type: application/json' \
   -d '{"token":"<token-from-email>","new_password":"newsecurepass123"}'
 
-# Change password while logged in:
+# Second use of the same token → 400
+curl -s -w "\nHTTP %{http_code}\n" -X POST "$BASE/auth/reset-password" \
+  -H 'Content-Type: application/json' \
+  -d '{"token":"<token-from-email>","new_password":"anotherpass123"}'
+
+# Log in, then change password while authenticated:
+TOKEN=$(curl -s -X POST "$BASE/auth/login" \
+  -d 'username=ops@example.com&password=newsecurepass123' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
 curl -s -X POST "$BASE/auth/change-password" \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"current_password":"newsecurepass123","new_password":"anothersecurepass123"}'
+
+# Wrong current password → 400
+curl -s -w "\nHTTP %{http_code}\n" -X POST "$BASE/auth/change-password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"current_password":"wrong","new_password":"xpass1234"}'
 ```
+
+| Step | Expected |
+| --- | --- |
+| `forgot-password` with registered email | **200** + generic message; email in Resend dashboard / inbox |
+| `forgot-password` with unknown email | **200** + identical message; no email |
+| `forgot-password` with invalid email | **422** |
+| `reset-password` with valid token | **200**; login works with new password |
+| `reset-password` with reused/expired token | **400** |
+| `change-password` without bearer | **401** |
+| `change-password` with wrong current | **400** |
+| `change-password` with correct current | **200** |
+
+#### UI (internal apps)
+
+With `npm run dev`, test in the browser on `:3001` (backoffice) or `:3002` (tracker). Full UI checklist: root [`README.md`](../../README.md#testing-password-recovery-and-change-m9).
+
+Ensure `PASSWORD_RESET_URL` matches the app under test (e.g. `http://localhost:3001/reset-password`).
 
 ## Supplier directory (M6)
 
