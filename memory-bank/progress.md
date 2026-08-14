@@ -86,6 +86,22 @@ _Last updated: Milestone 8 complete — frontend auth flows and route protection
 - [x] BFF auth routes; incident/supplier proxies forward `Authorization`
 - [x] `uis/website/` unchanged (fully public)
 
+### Milestone 9 — Password recovery and change (AUTH-03)
+
+**Phase 1 — Backend**
+
+- [x] Spec: `specs/09_SPECS_BACK.md`
+- [x] `POST /auth/forgot-password`, `/auth/reset-password`, `/auth/change-password`
+- [x] TinyDB `password_reset_tokens` table; opaque single-use tokens (SHA-256 hash stored)
+- [x] Resend email integration for password reset links
+- [x] Env vars documented in `services/api/.env.example` and README
+
+**Phase 2 — Frontend**
+
+- [x] Spec: `specs/09_SPECS_FRONT.md`
+- [x] `/forgot-password`, `/reset-password`, `/account/change-password` in internal apps
+- [x] BFF proxies; login forgot link; profile change-password link
+
 ## In progress
 
 - [ ] Live API integrations for backoffice operations dashboard (future milestone)

@@ -43,6 +43,7 @@
 7. **M6 supplier directory** — Pydantic models + TinyDB in `services/api/`; REST at `/suppliers`; backoffice proxies via `app/api/suppliers/`; seed with `uv run --directory services/api seed`.
 8. **M7 authentication** — Users + profiles in TinyDB (`auth.json`); JWT bearer tokens (PyJWT HS256); libpass bcrypt; `JWT_SECRET` required via `services/api/.env`; supplier and incident routes require auth.
 9. **M8 frontend auth** — `localStorage` token; `packages/shared/auth/` + `authFetch`; BFF forwards `Authorization`; internal apps guard routes except `/login` and `/register`; website stays public.
+10. **M9 password recovery (API)** — Reset tokens in TinyDB; Resend transactional email; `PASSWORD_RESET_URL` + `RESEND_*` env vars; public forgot/reset routes; authenticated change-password.
 
 ## Technical constraints
 

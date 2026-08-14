@@ -11,6 +11,7 @@ API_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_AUTH_DB_PATH = API_ROOT / "auth.json"
 USERS_TABLE = "users"
 PROFILES_TABLE = "profiles"
+PASSWORD_RESET_TOKENS_TABLE = "password_reset_tokens"
 
 _db: TinyDB | None = None
 
@@ -35,3 +36,7 @@ def get_users_table():
 
 def get_profiles_table():
     return get_auth_db().table(PROFILES_TABLE)
+
+
+def get_password_reset_tokens_table():
+    return get_auth_db().table(PASSWORD_RESET_TOKENS_TABLE)

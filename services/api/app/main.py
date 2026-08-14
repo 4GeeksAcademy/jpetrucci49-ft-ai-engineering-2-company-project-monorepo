@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_cors_origin_regex, get_cors_origins
 from app.incidents.router import router as incidents_router
-from auth.config import get_jwt_secret
+from auth.config import get_jwt_secret, validate_password_reset_config
 from routes.auth import router as auth_router
 from routes.profiles import router as profiles_router
 from routes.suppliers import router as suppliers_router
@@ -15,6 +15,7 @@ from routes.users import router as users_router
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     get_jwt_secret()
+    validate_password_reset_config()
     yield
 
 

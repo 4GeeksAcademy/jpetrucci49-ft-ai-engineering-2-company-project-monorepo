@@ -16,7 +16,7 @@ cd services/api && uv sync && cp .env.example .env && uv run seed && cd ../..
 npm run dev
 ```
 
-Set `JWT_SECRET` in `services/api/.env`. Seed is idempotent — `0 inserted` with `15 total` means suppliers are already loaded.
+Set `JWT_SECRET` in `services/api/.env`. For password reset (M9), also set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `PASSWORD_RESET_URL` — see [`services/api/README.md`](../../services/api/README.md#password-recovery-and-change-m9). Seed is idempotent — `0 inserted` with `15 total` means suppliers are already loaded.
 
 This app only:
 
@@ -32,10 +32,24 @@ Ensure the API is running (`npm run dev:api` or full `npm run dev`).
 
 | Route | Milestone | Purpose |
 | --- | --- | --- |
+| `/login`, `/register` | M8 | Sign in and registration |
+| `/forgot-password`, `/reset-password` | M9 | Password recovery (public) |
+| `/account/profile`, `/account/change-password` | M8/M9 | Profile and password change (authenticated) |
 | `/` | M2 | Operations dashboard (billing, clinical, CME) |
 | `/utilities` | M2 | Utility function manual runner |
 | `/incidents` | M5 | Patient incident CSV upload and analysis |
 | `/suppliers` | M6 | Supplier directory — browse, filter, register, rate/status |
+
+## Testing password recovery (M9)
+
+1. Ensure Resend env vars are set in `services/api/.env` and `PASSWORD_RESET_URL=http://localhost:3001/reset-password`.
+2. Register at http://localhost:3001/register (or use an existing account).
+3. Go to `/login` → **Forgot your password?** → submit your email → confirmation message; form disables.
+4. Open the reset link from email → set a new password → land on `/login` with success message.
+5. Sign in with the new password.
+6. Go to `/account/profile` → **Change password** → update password while logged in.
+
+API-level curl tests: [`services/api/README.md`](../../services/api/README.md#testing). Full UI + API checklist: root [`README.md`](../../README.md#testing-password-recovery-and-change-m9).
 
 ## BFF proxy pattern
 

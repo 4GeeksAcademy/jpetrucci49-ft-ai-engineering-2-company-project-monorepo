@@ -13,7 +13,7 @@ from auth.models import (
     UserRole,
     UserUpdate,
 )
-from auth.security import hash_password
+from auth.security import hash_password, verify_password
 from auth.services import profiles as profile_service
 from tinydb import Query
 
@@ -124,3 +124,21 @@ def delete_user(user_id: int) -> None:
         raise LookupError("User not found.")
     profile_service.delete_profile_by_user_id(user_id)
     table.remove(doc_ids=[user_id])
+
+
+def update_password(user_id: int, new_password: str) -> None:
+    table = get_users_table()
+    if table.get(doc_id=user_id) is None:
+        raise LookupError("User not found.")
+    table.update({"hashed_password": hash_password(new_password)}, doc_ids=[user_id])
+
+
+def change_password(user_id: int, current_password: str, new_password: str) -> None:
+    user = get_user_by_id(user_id)
+    if user is None:
+        raise LookupError("User not found.")
+    if not verify_password(current_password, user.hashed_password):
+        raise ValueError("Current password is incorrect.")
+    if current_password == new_password:
+        raise ValueError("New password must be different from the current password.")
+    update_password(user_id, new_password)

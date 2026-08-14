@@ -16,6 +16,8 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const successMessage = searchParams.get("message");
+
   useEffect(() => {
     bootstrapAuthSession();
     if (isAuthenticated()) {
@@ -59,6 +61,12 @@ export function LoginForm() {
       <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
       <p className="mt-1 text-sm text-slate-600">Use your HealthCore credentials.</p>
 
+      {successMessage ? (
+        <p className="mt-4 text-sm text-teal-700" role="status">
+          {successMessage}
+        </p>
+      ) : null}
+
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <label className="block text-sm font-medium text-slate-700">
           Email
@@ -86,6 +94,12 @@ export function LoginForm() {
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
         </label>
+
+        <p className="text-right text-sm">
+          <Link href="/forgot-password" className="font-medium text-teal-700 hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
 
         {error ? (
           <p className="text-sm text-red-700" role="alert">

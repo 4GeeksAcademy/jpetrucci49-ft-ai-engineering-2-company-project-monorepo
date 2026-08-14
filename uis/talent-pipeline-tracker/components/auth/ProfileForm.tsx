@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { authFetch } from "@healthcore/auth";
@@ -100,7 +101,12 @@ export function ProfileForm() {
   return (
     <div className="max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <h1 className="text-xl font-semibold text-slate-900">Account profile</h1>
-      <p className="mt-1 text-sm text-slate-600">Update your contact details.</p>
+      <p className="mt-1 text-sm text-slate-600">
+        Update your contact details.{" "}
+        <Link href="/account/change-password" className="font-medium text-teal-700 hover:underline">
+          Change password
+        </Link>
+      </p>
 
       <dl className="mt-4 space-y-2 text-sm">
         <div>

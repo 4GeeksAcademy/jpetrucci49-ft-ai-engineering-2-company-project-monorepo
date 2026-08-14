@@ -10,6 +10,7 @@ dependencies = [
     "pandas>=3.0.5",
     "pyjwt>=2.8,<3",
     "python-multipart>=0.0.20",
+    "resend>=2.0,<3",
     "tinydb>=4.8.2",
     "uvicorn[standard]>=0.34.0",
 ]
