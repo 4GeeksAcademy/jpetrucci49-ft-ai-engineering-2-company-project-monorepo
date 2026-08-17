@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 8 complete — frontend auth flows and route protection_
+_Last updated: Milestone 10 complete — authentication API unit tests (AUTH-088)_
 
 ## Completed
 
@@ -101,6 +101,14 @@ _Last updated: Milestone 8 complete — frontend auth flows and route protection
 - [x] Spec: `specs/09_SPECS_FRONT.md`
 - [x] `/forgot-password`, `/reset-password`, `/account/change-password` in internal apps
 - [x] BFF proxies; login forgot link; profile change-password link
+
+### Milestone 10 — Authentication API unit tests (AUTH-088)
+
+- [x] Spec: `specs/10_SPECS.md`; test plan: `TESTING.md`
+- [x] `services/api/tests/` — pytest suite (67 tests) with isolated TinyDB fixtures
+- [x] Coverage **91%** on `auth/` (`uv run pytest --cov=auth`)
+- [x] Jest config (`jest.config.mjs`) + tests in `packages/shared/auth/__tests__/`
+- [x] `npm run test:auth` — 8 Jest tests for errors, token, cross-app helpers
 
 ## In progress
 

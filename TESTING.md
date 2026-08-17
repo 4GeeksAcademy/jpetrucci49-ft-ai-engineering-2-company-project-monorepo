@@ -37,7 +37,8 @@ Tests use an isolated TinyDB file (`AUTH_DB_PATH` temp dir) and `HEALTHCORE_API_
 Authentication-related client helpers live in `packages/shared/auth/`. Configure Jest at the monorepo root (or a dedicated package config) and run:
 
 ```bash
-npm install                    # includes jest + ts-jest (when configured)
+npm install                    # includes jest + ts-jest
+npm run test:auth              # jest with coverage for packages/shared/auth/
 npx jest --coverage
 ```
 
@@ -267,7 +268,7 @@ Target: `packages/shared/auth/` — client-side auth **logic** (not React compon
 
 Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test.
 
-> **Note:** The monorepo root currently uses Vitest for M2 utilities. AUTH-088 asks for Jest — add `jest.config.ts` at repo root (or under `packages/shared/`) when implementing TS tests. Document the final command here once configured.
+> **Note:** The monorepo root uses Vitest for M2 utilities. AUTH-088 uses Jest for auth helpers — run `npm run test:auth` (config: `jest.config.mjs`).
 
 ---
 
@@ -299,17 +300,17 @@ Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test.
 
 ### FastAPI — pytest
 
-- [ ] `tests/` directory with `conftest.py`
-- [ ] One module per endpoint group (see layout above)
-- [ ] ≥ 3 tests per endpoint (happy, edge, failure)
-- [ ] `uv run pytest` passes
-- [ ] `uv run pytest --cov=auth` ≥ **70%**
+- [x] `tests/` directory with `conftest.py`
+- [x] One module per endpoint group (see layout above)
+- [x] ≥ 3 tests per endpoint (happy, edge, failure)
+- [x] `uv run pytest` passes
+- [x] `uv run pytest --cov=auth` ≥ **70%** (current: **91%**)
 
 ### TypeScript — Jest
 
-- [ ] Jest configured (`jest.config.ts` or `.js`)
-- [ ] Tests for `packages/shared/auth/` helpers
-- [ ] `jest --coverage` passes
+- [x] Jest configured (`jest.config.mjs`)
+- [x] Tests for `packages/shared/auth/` helpers
+- [x] `npm run test:auth` passes
 
 ### AI workflow
 
