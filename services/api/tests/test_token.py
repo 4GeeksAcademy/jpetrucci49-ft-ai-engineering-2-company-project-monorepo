@@ -44,7 +44,7 @@ def test_s4_expired_jwt_is_rejected():
 def test_s5_jwt_with_wrong_secret_is_rejected():
     token = jwt.encode(
         {"sub": "1", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
-        "wrong-secret",
+        "WrongSecret-key-for-unit-testsie",
         algorithm=ALGORITHM,
     )
     with pytest.raises(jwt.InvalidTokenError):

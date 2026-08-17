@@ -15,7 +15,7 @@ from auth.services import users as user_service
 @pytest.fixture(autouse=True)
 def auth_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HEALTHCORE_API_TEST", "1")
-    monkeypatch.setenv("JWT_SECRET", "test-secret-key-for-unit-tests")
+    monkeypatch.setenv("JWT_SECRET", "test-secret-key-for-unit-testsie")
     monkeypatch.setenv("RESET_TOKEN_EXPIRE_MINUTES", "30")
     monkeypatch.setenv("PASSWORD_RESET_URL", "http://localhost:3001/reset-password")
 
