@@ -9,6 +9,17 @@ This document lives at the **monorepo root** (`TESTING.md`) and is the **test pl
 
 ## How to run tests
 
+### TypeScript — which command?
+
+| Command | Runner | Scope |
+| --- | --- | --- |
+| `npm test` | **Vitest** | M2 utilities only (`tests/utils/`) |
+| `npm run test:auth` | **Jest** | `packages/shared/auth/` |
+| `npm run test:tracker` | **Jest** | `uis/talent-pipeline-tracker/lib/` |
+| `npm run test:jest` | **Jest** | Auth + tracker suites |
+
+Vitest is scoped via `vitest.config.ts` so it does **not** pick up Jest suites under `packages/shared/auth/` or `uis/talent-pipeline-tracker/__tests__/`.
+
 ### FastAPI (pytest)
 
 From the FastAPI project root (`services/api/`):
