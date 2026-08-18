@@ -30,7 +30,7 @@ def update_my_profile(
 ) -> ProfilePublic:
     if payload.name is None and payload.phone is None and payload.address is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="At least one profile field must be provided.",
         )
 

@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Milestone 8 complete — frontend auth flows and route protection_
+_Last updated: Milestone 10 complete — authentication API unit tests (AUTH-088)_
 
 ## Completed
 
@@ -101,6 +101,22 @@ _Last updated: Milestone 8 complete — frontend auth flows and route protection
 - [x] Spec: `specs/09_SPECS_FRONT.md`
 - [x] `/forgot-password`, `/reset-password`, `/account/change-password` in internal apps
 - [x] BFF proxies; login forgot link; profile change-password link
+
+### Milestone 10 — Authentication API unit tests (AUTH-088)
+
+- [x] Spec: `specs/10_SPECS.md`; test plan: `TESTING.md`
+- [x] `services/api/tests/` — pytest suite (67 tests) with isolated TinyDB fixtures
+- [x] Coverage **91%** on `auth/` (`uv run pytest --cov=auth`)
+- [x] Jest config (`jest.config.mjs`) + tests in `packages/shared/auth/__tests__/`
+- [x] `npm run test:auth` — 8 Jest tests for errors, token, cross-app helpers
+
+### Milestone 10 Extra — API-042 + FE-019
+
+- [x] Spec: `specs/10_SPECS_EXTRA.md`
+- [x] `test_suppliers.py` + `test_incidents.py` (12 tests); isolated `SUPPLIERS_DB_PATH`
+- [x] Coverage ≥ **60%** on supplier/incident modules (models **83%**, `routes/suppliers` **72%**, `app/incidents/analysis` **90%**)
+- [x] `uis/talent-pipeline-tracker/__tests__/` — validation + labels (10 Jest tests, **~86%** line coverage)
+- [x] `npm run test:tracker`; `TESTING.md` updated
 
 ## In progress
 
