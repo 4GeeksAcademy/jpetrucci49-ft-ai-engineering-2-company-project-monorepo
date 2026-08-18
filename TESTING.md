@@ -1,9 +1,9 @@
-# HealthCore API — Authentication Testing (AUTH-088)
+# HealthCore — Testing Guide (AUTH-088 + API-042 + FE-019)
 
-**Ticket:** AUTH-088 — Unit test coverage for the authentication API  
-**Spec:** [`specs/10_SPECS.md`](specs/10_SPECS.md)
+**Tickets:** AUTH-088 (authentication API), API-042 (backoffice API), FE-019 (frontend utilities)  
+**Specs:** [`specs/10_SPECS.md`](specs/10_SPECS.md), [`specs/10_SPECS_EXTRA.md`](specs/10_SPECS_EXTRA.md)
 
-This document lives at the **monorepo root** (`TESTING.md`) and is the **test plan and testing guide** for the FastAPI authentication module (`services/api/`). Tests assert **business logic** — what the application *decides* — not HTTP serialisation or framework plumbing.
+This document lives at the **monorepo root** (`TESTING.md`) and is the **test plan and testing guide** for FastAPI logic in `services/api/` and utility helpers in TypeScript frontends. Tests assert **business logic** — what the application *decides* — not HTTP serialisation or framework plumbing.
 
 ---
 
@@ -44,6 +44,43 @@ npx jest --coverage
 
 See [§ TypeScript test suites](#typescript-test-suites-jest) below.
 
+### Backoffice API — suppliers & incidents (API-042)
+
+From `services/api/`:
+
+```bash
+cd services/api
+uv run pytest tests/test_suppliers.py tests/test_incidents.py -v
+uv run pytest --cov=app.incidents.analysis --cov=routes.suppliers --cov=models --cov-report=term-missing
+```
+
+From the monorepo root:
+
+```bash
+uv run --directory services/api pytest tests/test_suppliers.py tests/test_incidents.py
+```
+
+**Coverage target:** ≥ **60%** on supplier and incident modules under test (current: **~72–90%** per module).
+
+Supplier tests use an isolated TinyDB file via `SUPPLIERS_DB_PATH` (temp dir). Incident tests load `scripts/incidents.csv` for aggregate metrics only — no row-level PHI in assertions.
+
+### Frontend utilities — talent tracker (FE-019)
+
+Candidate form validators live in `uis/talent-pipeline-tracker/lib/`. Run Jest from the monorepo root:
+
+```bash
+npm run test:tracker
+```
+
+With coverage (from the app directory):
+
+```bash
+cd uis/talent-pipeline-tracker
+node ../../node_modules/jest/bin/jest.js --config jest.config.mjs --coverage
+```
+
+Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test. Current line coverage on tested modules: **~86%** (`validation.ts`, `labels.ts`).
+
 ---
 
 ## Testing principles
@@ -83,10 +120,14 @@ services/api/
     test_users_admin.py      ← GET/PUT/DELETE /users, GET /users/{id}
     test_profiles.py         ← GET/PUT /profiles/me
     test_dependencies.py     ← require_admin, require_self_or_admin
+    test_suppliers.py        ← POST/PATCH /suppliers (API-042)
+    test_incidents.py        ← incident analysis + store (API-042)
 ```
 
 | Module | Endpoints / logic covered | Why these cases |
 | --- | --- | --- |
+| `test_suppliers.py` | `/suppliers` CRUD + rate/status | Registry invariants — currency pairing, suspension, rate timestamps |
+| `test_incidents.py` | `app/incidents/analysis.py`, `store.py` | Aggregate reporting and PHI-safe validation |
 | `test_register.py` | `POST /users` | Registration is the entry point; duplicates and normalisation caused past data bugs |
 | `test_login.py` | `POST /auth/login` | Core auth gate — wrong password, inactive users must never receive a token |
 | `test_token.py` | `auth/security.py` | Central crypto/JWT — expiry and tampering are high-risk regression areas |
@@ -240,6 +281,28 @@ Implement **at minimum** one happy-path, one edge-case, and one failure-mode tes
 | Dp6 | Happy | `require_self_or_admin` admin on other id | Admin override |
 | Dp7 | Failure | `require_self_or_admin` user on other id → 403 | Horizontal privilege |
 
+### Suppliers — `test_suppliers.py` (API-042)
+
+| ID | Type | Case | Why included |
+| --- | --- | --- | --- |
+| SP1 | Happy | Valid supplier create → `active`, correct currency | Baseline registry flow |
+| SP2 | Edge | Rate update → `updated_at` changes | Finance tracking |
+| SP3 | Edge | Suspend → row retained | Regulatory history |
+| SP4 | Failure | Invalid category rejected | Data integrity |
+| SP5 | Failure | USA + `GBP` rejected | Country–currency invariant |
+| SP6 | Failure | Missing id → not found | Invalid lookup |
+
+### Incidents — `test_incidents.py` (API-042)
+
+| ID | Type | Case | Why included |
+| --- | --- | --- | --- |
+| IN1 | Happy | `scripts/incidents.csv` totals 100 / 94 / 6 | Core reporting |
+| IN2 | Edge | Multi-rule row → per-rule counts | Multi-rule handling |
+| IN3 | Edge | Store overwrite on second analysis | Last-result behaviour |
+| IN4 | Failure | Missing column detected | Safe upload rejection |
+| IN5 | Failure | Empty store → `None` | Cold start |
+| IN6 | Failure | No PHI in error/export paths | Compliance |
+
 ---
 
 ## Regression risks explicitly covered
@@ -253,10 +316,14 @@ Implement **at minimum** one happy-path, one edge-case, and one failure-mode tes
 | Stale reset link after newer request | F5 |
 | Plain-text password in database | U1, S1 |
 | Expired JWT accepted | S4 |
+| Country/currency mismatch on suppliers | SP5 |
+| PHI leaked in incident errors/exports | IN6 |
 
 ---
 
 ## TypeScript test suites (Jest)
+
+### Shared auth helpers (AUTH-088)
 
 Target: `packages/shared/auth/` — client-side auth **logic** (not React components).
 
@@ -269,6 +336,17 @@ Target: `packages/shared/auth/` — client-side auth **logic** (not React compon
 Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test.
 
 > **Note:** The monorepo root uses Vitest for M2 utilities. AUTH-088 uses Jest for auth helpers — run `npm run test:auth` (config: `jest.config.mjs`).
+
+### Talent tracker utilities (FE-019)
+
+Target: `uis/talent-pipeline-tracker/lib/` — run `npm run test:tracker`.
+
+| Module | Functions | Cases | Coverage |
+| --- | --- | --- | --- |
+| `validation.ts` | `validateRecordForm`, `hasFieldErrors`, `validateNoteContent` | Happy + failure each | ~76% lines |
+| `labels.ts` | `getStatusLabel`, `getStageLabel` | Known label + unknown passthrough | 100% lines |
+
+Tests live in `uis/talent-pipeline-tracker/__tests__/`.
 
 ---
 
@@ -312,6 +390,19 @@ Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test.
 - [x] Tests for `packages/shared/auth/` helpers
 - [x] `npm run test:auth` passes
 
+### API-042 — backoffice pytest
+
+- [x] `test_suppliers.py` and `test_incidents.py`
+- [x] ≥ 3 tests per endpoint group
+- [x] ≥ **60%** coverage on tested modules (current: models **83%**, suppliers route **72%**, incidents analysis **90%**)
+- [x] `uv run pytest` passes (**79** tests total)
+
+### FE-019 — frontend Jest
+
+- [x] `uis/talent-pipeline-tracker/__tests__/`
+- [x] ≥ 3 utility functions tested (happy + failure each)
+- [x] `npm run test:tracker` passes (**10** tests)
+
 ### AI workflow
 
 - [ ] Agent used to review case list for gaps
@@ -324,6 +415,5 @@ Per function: **≥ 1 happy-path + ≥ 1 failure-mode** test.
 
 - HTTP serialisation / OpenAPI contract tests
 - Live Resend email delivery
-- Supplier and incident endpoints
 - Next.js BFF route handlers
 - End-to-end browser tests

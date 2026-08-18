@@ -6,6 +6,7 @@ from collections.abc import Generator
 from unittest.mock import patch
 
 import auth.database as auth_database
+import database as suppliers_database
 import pytest
 from auth.models import UserRegister, UserRole, UserUpdate
 from auth.security import create_access_token, verify_password
@@ -18,6 +19,15 @@ def auth_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JWT_SECRET", "test-secret-key-for-unit-testsie")
     monkeypatch.setenv("RESET_TOKEN_EXPIRE_MINUTES", "30")
     monkeypatch.setenv("PASSWORD_RESET_URL", "http://localhost:3001/reset-password")
+
+
+@pytest.fixture(autouse=True)
+def suppliers_db(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    db_path = tmp_path / "suppliers.json"
+    monkeypatch.setenv("SUPPLIERS_DB_PATH", str(db_path))
+    suppliers_database._db = None
+    yield
+    suppliers_database._db = None
 
 
 @pytest.fixture(autouse=True)

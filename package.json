@@ -22,6 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:auth": "jest --coverage",
+    "test:tracker": "npm run test --prefix uis/talent-pipeline-tracker",
     "utils:playground": "tsx src/utils-playground.ts"
   },
   "devDependencies": {
