@@ -1,4 +1,4 @@
-"""Prefect flow monthly_clinic_supply_performance."""
+"""Prefect flow monthly_clinic_supply_performance — orchestrates named subflows."""
 
 from __future__ import annotations
 
@@ -18,14 +18,15 @@ from data.pipelines.monthly_clinic_supply_performance.db import (
     begin_pipeline_run,
     complete_pipeline_run,
 )
-from data.pipelines.monthly_clinic_supply_performance.extract import (
-    extract_from_sample,
-    extract_month,
+from data.pipelines.monthly_clinic_supply_performance.extract_flow import (
+    extract_monthly_clinic_supply_events,
 )
-from data.pipelines.monthly_clinic_supply_performance.load import load_clinic_month
-from data.pipelines.monthly_clinic_supply_performance.transform import (
-    transform_clinic_month,
-    write_eval_snapshot,
+from data.pipelines.monthly_clinic_supply_performance.load_flow import (
+    load_monthly_clinic_supply_performance,
+)
+from data.pipelines.monthly_clinic_supply_performance.transform_flow import (
+    snapshot_monthly_clinic_supply_eval,
+    transform_monthly_clinic_supply_kpis,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,30 +62,17 @@ def run_monthly_clinic_supply_performance(
     month_start: date | str | None = None,
     allow_sample: bool = False,
 ) -> dict[str, Any]:
-    """Extract → transform → load the Monthly Clinic Supply Performance pack."""
+    """Orchestrate extract → transform → eval snapshot → load for one UTC month."""
     run_logger = get_run_logger()
     month = resolve_month_start(month_start)
     run_id = begin_pipeline_run(month, prefect_flow_run_id=_prefect_run_id())
     records_read = 0
     records_written = 0
     try:
-        # Handle extract failure explicitly so a downed DB can fall back to
-        # data/raw sample in CLI/dev without aborting the rest of the flow.
-        extract_state = extract_month(month, return_state=True)
-        if extract_state.is_completed():
-            extracted = extract_state.result()
-        elif allow_sample:
-            run_logger.warning(
-                "extract_month failed; using data/raw/telemetry_events_sample.json"
-            )
-            extracted = extract_from_sample(month)
-        else:
-            raise RuntimeError(
-                f"extract_month failed: {extract_state.message or extract_state.type}"
-            )
-
+        extracted = extract_monthly_clinic_supply_events(month, allow_sample)
         records_read = int(extracted["records_read"])
-        transformed = transform_clinic_month(
+
+        transformed = transform_monthly_clinic_supply_kpis(
             extracted["extract_path"],
             month,
             extracted["content_hash"],
@@ -92,13 +80,15 @@ def run_monthly_clinic_supply_performance(
         kpis = transformed["kpis"]
 
         # Optional / non-critical: a failed eval snapshot must not interrupt ETL.
-        eval_state = write_eval_snapshot(kpis, month, return_state=True)
+        eval_state = snapshot_monthly_clinic_supply_eval(
+            kpis, month, return_state=True
+        )
         if eval_state.is_failed():
             run_logger.warning(
-                "write_eval_snapshot failed; continuing extract → transform → load"
+                "snapshot_monthly_clinic_supply_eval failed; continuing load"
             )
 
-        records_written = load_clinic_month(kpis, month)
+        records_written = load_monthly_clinic_supply_performance(kpis, month)
         metadata = complete_pipeline_run(
             run_id,
             "completed",
@@ -113,7 +103,9 @@ def run_monthly_clinic_supply_performance(
             "records_read": records_read,
             "records_written": records_written,
             "source": extracted.get("source"),
-            "missing_inbound_cost_count": transformed.get("missing_inbound_cost_count", 0),
+            "missing_inbound_cost_count": transformed.get(
+                "missing_inbound_cost_count", 0
+            ),
         }
         run_logger.info("completed month_start=%s written=%s", month, records_written)
         return result

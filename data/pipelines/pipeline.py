@@ -18,17 +18,14 @@ _ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-# Prefect 3 local run — no interactive CLI prompts; home dir inside the repo.
-os.environ.setdefault("PREFECT_CLI_PROMPT", "false")
-os.environ["PREFECT_HOME"] = str(_ROOT / ".prefect")
+from data.pipelines.paths import ensure_import_paths  # noqa: E402
+
+ensure_import_paths()
 os.environ.setdefault("PREFECT_API_ENABLE_METRICS", "false")
 
 from data.pipelines.monthly_clinic_supply_performance.flow import (  # noqa: E402
     run_monthly_clinic_supply_performance,
 )
-from data.pipelines.paths import ensure_import_paths  # noqa: E402
-
-ensure_import_paths()
 
 
 def main(argv: list[str] | None = None) -> int:

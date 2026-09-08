@@ -140,6 +140,9 @@ def begin_pipeline_run(
     month_start: date,
     prefect_flow_run_id: str | None = None,
 ) -> str:
+    # Overlap lock: a second start (manual POST while cron is still Running)
+    # closes leftover `running` rows so Okonkwo does not read a stale pack.
+    # Answers PIPELINE_DESIGN.md §6 / “what if two runs overlap?”
     engine = ensure_reporting_schema()
     fail_stale_running(engine)
     run_id = str(uuid4())

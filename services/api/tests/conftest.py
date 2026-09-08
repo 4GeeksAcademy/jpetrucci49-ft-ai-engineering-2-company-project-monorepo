@@ -16,6 +16,9 @@ _PREFECT_HOME.mkdir(parents=True, exist_ok=True)
 os.environ["PREFECT_HOME"] = str(_PREFECT_HOME)
 os.environ["PREFECT_RESULTS_LOCAL_STORAGE_PATH"] = str(_PREFECT_HOME / "storage")
 os.environ.setdefault("PREFECT_CLI_PROMPT", "false")
+os.environ["PREFECT_SERVER_EPHEMERAL_ENABLED"] = "true"
+os.environ.pop("PREFECT_API_URL", None)
+os.environ.pop("PREFECT_API_KEY", None)
 
 import auth.database as auth_database
 import database as suppliers_database

@@ -48,6 +48,8 @@ Telemetry capture (M6.5) posts batches to the FastAPI stub. Copy `NEXT_PUBLIC_TE
 | `/inventory/orders/inbound` | M5.5 | Log a vendor delivery |
 | `/inventory/orders/outbound` | M5.5 | Log a clinical consumption |
 | `/inventory/orders` | M5.5 | Read-only supply movements |
+| `/reporting` | M6.5 | Monthly Clinic Supply Performance Report (Dr. Okonkwo / Claire) |
+| `/telemetry` | M6.5 | Engineering telemetry health (events, errors, latency, login failures) |
 
 ## Testing password recovery (M9)
 
@@ -69,7 +71,7 @@ The browser calls same-origin `/api/*` routes. Next.js proxies server-side to Fa
 | `INCIDENTS_API_URL` | `http://127.0.0.1:8000` | `/api/incidents/*` (M5 analyze/export and M11 manager) |
 | `SUPPLIERS_API_URL` | `http://127.0.0.1:8000` | `/api/suppliers/*` |
 | `AUTH_API_URL` | `http://127.0.0.1:8000` | `/api/auth/*`, `/api/users`, `/api/profiles/*` |
-| `INVENTORY_API_URL` | `http://127.0.0.1:8000` | `/api/inventory/*` |
+| `INVENTORY_API_URL` | `http://127.0.0.1:8000` | `/api/inventory/*`, `/api/reporting/*`, `/api/telemetry/*` |
 
 ### Error handling (M12)
 
@@ -149,6 +151,19 @@ Spec: `specs/06_SPECS_FRONTEND.md`.
 - Nav: **Supplies**, **Movements** in `BackofficeShell`
 
 Spec: `specs/05.5_SPECS_FRONT.md`. Seed: `uv run --directory services/api python seed_inventory.py`.
+
+### Clinic supply report (M6.5)
+
+| File | Role |
+| --- | --- |
+| `lib/api/reporting.ts` | Client fetch for KPI pack + latest pipeline run |
+| `app/api/reporting/**/route.ts` | BFF to FastAPI `/reporting/*` (`INVENTORY_API_URL`) |
+| `components/reporting/ClinicSupplyReportPage.tsx` | Four CONTEXT KPI tables; clinic labels; no mixed-currency total |
+| `lib/reporting/clinics.ts` | Slug → label map aligned with `PIPELINE_DESIGN.md` §4.2 |
+
+Nav: **Clinic supply**. Seed the pack with `uv run python data/pipelines/pipeline.py --month-start 2026-08-01` against the same DB as the API, then reload `/reporting`. Empty `clinics` is expected until that run.
+
+Spec: `specs/06.5_PREFECT_SPECS.md`.
 
 ## Dashboard sections (M2)
 

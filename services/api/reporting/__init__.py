@@ -31,3 +31,9 @@ for _path in (str(_REPO_ROOT), str(_API_ROOT)):
 
 os.environ.setdefault("PREFECT_CLI_PROMPT", "false")
 os.environ["PREFECT_HOME"] = str(_REPO_ROOT / ".prefect")
+try:
+    from data.pipelines.paths import configure_prefect_runtime
+
+    configure_prefect_runtime()
+except Exception:
+    pass
