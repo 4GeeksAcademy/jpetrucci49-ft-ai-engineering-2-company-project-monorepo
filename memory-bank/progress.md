@@ -199,13 +199,17 @@ _Last updated: Monthly clinic supply performance pipeline design_
 - [x] `services/api/reporting/` — `GET` KPIs, `GET` latest run, `POST` trigger; imports from `data/pipelines/`
 - [x] Additive `unit_cost` / `total_cost` on `inbound_order_created` allowlist (not `telemetry/analysis.py`)
 
+### Data pipelines — Subflows, tests, board dashboard (spec)
+
+- [x] Spec: `specs/06.5_PREFECT_SPECS.md` — named subflows, `tests/pipelines/test_pipeline.py`, keep CLI, backoffice `/reporting`
+
 ## In progress
 
 _None._
 
 ## Planned next
 
+- Implement `specs/06.5_PREFECT_SPECS.md` (subflows + transform tests + `/reporting`)
 - Live API integrations for backoffice operations dashboard
 - Agent implementations under `agents/`
-- Executive KPI dashboard
 - HealthCore central API
