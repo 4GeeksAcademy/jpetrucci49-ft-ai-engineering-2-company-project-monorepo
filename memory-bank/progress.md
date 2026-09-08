@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Monthly clinic supply performance pipeline design_
+_Last updated: Prefect subflows + /reporting dashboard_
 
 ## Completed
 
@@ -203,13 +203,21 @@ _Last updated: Monthly clinic supply performance pipeline design_
 
 - [x] Spec: `specs/06.5_PREFECT_SPECS.md` — named subflows, `tests/pipelines/test_pipeline.py`, keep CLI, backoffice `/reporting`
 
+### Data pipelines — Subflows, tests, board dashboard (implementation)
+
+- [x] Named subflows: `extract_monthly_clinic_supply_events`, `transform_monthly_clinic_supply_kpis`, `load_monthly_clinic_supply_performance`, `snapshot_monthly_clinic_supply_eval` (`return_state=True`)
+- [x] CLI unchanged: `uv run python data/pipelines/pipeline.py [--month-start YYYY-MM-DD]`
+- [x] Isolated transform tests: `tests/pipelines/test_pipeline.py` (hand-calc Austin North 205 USD; no DB)
+- [x] Root `pyproject.toml` `[tool.pytest.ini_options]` — `testpaths = ["tests/pipelines"]`, `pythonpath = ["."]`
+- [x] Backoffice `/reporting` — four CONTEXT KPI titles, clinic labels, BFF `/api/reporting/*`; nav **Clinic supply**
+- [x] Overlap lock documented: `begin_pipeline_run` closes leftover `running` rows (`PIPELINE_DESIGN.md` §6 / §7)
+
 ## In progress
 
 _None._
 
 ## Planned next
 
-- Implement `specs/06.5_PREFECT_SPECS.md` (subflows + transform tests + `/reporting`)
 - Live API integrations for backoffice operations dashboard
 - Agent implementations under `agents/`
 - HealthCore central API

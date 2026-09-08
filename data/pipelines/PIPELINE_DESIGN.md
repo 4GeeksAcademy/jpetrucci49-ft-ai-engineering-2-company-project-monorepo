@@ -69,7 +69,7 @@ Produce the monthly per-clinic rollup that feeds **Dr. Okonkwo’s (and Claire�
 | Extract window | `timestamp >= month_start AND timestamp < month_start + 1 month` |
 | `event_type` filter | `IN ('inbound_order_created', 'outbound_order_created', 'stock_threshold_triggered', 'supply_expiry_flagged')` — one query |
 | Schedule | Prefect cron `0 6 1 * *` (06:00 UTC on the 1st) so the pack is ready the first working day; plus manual `POST /reporting/pipeline-runs` |
-| Run command | `python data/pipelines/pipeline.py` (optional `--month-start YYYY-MM-DD`). From the repo root with Prefect 3 installed (`uv sync && uv run python data/pipelines/pipeline.py`). |
+| Run command | `python data/pipelines/pipeline.py` (optional `--month-start YYYY-MM-DD`). From the repo root with Prefect 3 installed (`uv sync && uv run python data/pipelines/pipeline.py`). The CLI still calls `run_monthly_clinic_supply_performance`; that flow orchestrates named extract / transform / load / eval subflows (§7). |
 
 Raw dumps for eval/fixtures may later land in `data/raw/`; production extract always hits Postgres.
 
@@ -225,15 +225,26 @@ Clinics with **zero** events in the month: v1 **omits** them (same as the techni
 
 **Flow:** `monthly_clinic_supply_performance`  
 **Entry:** `data/pipelines/monthly_clinic_supply_performance/flow.py` → `run_monthly_clinic_supply_performance(month_start: date | None)`  
+CLI unchanged: `python data/pipelines/pipeline.py` (see §3).  
 Default `month_start`: previous UTC calendar month when run on the 1st (or “month containing now−1 day” for manual mid-month refresh).
 
-| Task | Responsibility |
+The main flow **only orchestrates**. It begins/completes `pipeline_runs`, then calls the named subflows below. It does not duplicate SQL or KPI math. Overlap lock: `begin_pipeline_run` closes leftover `running` rows before inserting the new run (answers §6 “what if two runs overlap?”).
+
+| Subflow | Inputs | Outputs |
+| --- | --- | --- |
+| `extract_monthly_clinic_supply_events` | `month_start`, `allow_sample` | `extract_path`, `records_read`, `content_hash`, `source` |
+| `transform_monthly_clinic_supply_kpis` | `extract_path`, `month_start`, `content_hash` | `kpis`, `missing_inbound_cost_count`, `kpis_path` |
+| `snapshot_monthly_clinic_supply_eval` | `kpis`, `month_start` | eval path (invoked with `return_state=True`; failure does not stop load) |
+| `load_monthly_clinic_supply_performance` | `kpis`, `month_start` | `records_written` (upsert destination) |
+
+| Task (called by subflows) | Responsibility |
 | --- | --- |
 | `extract_month` | SQL load of the four `event_type`s in `[month_start, next_month)` |
 | `transform_clinic_month` | Dedup `eventId`, map clinic slugs, compute the four KPIs, attach `currency` |
-| `load_clinic_month` | Upsert destination + finalize `pipeline_runs` |
+| `load_clinic_month` | Upsert destination; run log finalized by the main flow |
+| `write_eval_snapshot` | Optional `data/eval/` snapshot |
 
-Optional later (Part 3 subflows): extract / transform / load as subflows; a second flow `backfill_clinic_supply_performance(start_month, end_month)` looping months. Not required for Part 1.
+A second flow `backfill_clinic_supply_performance(start_month, end_month)` looping months is not required for v1. Destination remains `reporting.monthly_clinic_supply_performance` only.
 
 ### 7.2 States
 
