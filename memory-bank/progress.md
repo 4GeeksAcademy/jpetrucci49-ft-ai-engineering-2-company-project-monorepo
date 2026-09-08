@@ -211,6 +211,7 @@ _Last updated: Prefect subflows + /reporting dashboard_
 - [x] Root `pyproject.toml` `[tool.pytest.ini_options]` — `testpaths = ["tests/pipelines"]`, `pythonpath = ["."]`
 - [x] Backoffice `/reporting` — four CONTEXT KPI titles, clinic labels, BFF `/api/reporting/*`; nav **Clinic supply**
 - [x] Overlap lock documented: `begin_pipeline_run` closes leftover `running` rows (`PIPELINE_DESIGN.md` §6 / §7)
+- [x] Optional Prefect Cloud: `PREFECT_API_KEY` / `PREFECT_API_URL` in gitignored `.env`; CLI uses repo `.prefect/` (tests stay ephemeral)
 
 ## In progress
 

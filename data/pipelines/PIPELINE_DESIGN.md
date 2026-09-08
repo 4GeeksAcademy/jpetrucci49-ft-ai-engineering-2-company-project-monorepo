@@ -265,6 +265,16 @@ No custom “Cancelled” handling in v1.
 
 Do not store the pooler password in the repo. The worker uses the Prefect block; local `uv` runs may read `services/api/.env` the same way inventory does.
 
+### 7.4 Prefect Cloud (optional)
+
+v1 runs locally with an ephemeral Prefect API unless Cloud is configured. To send flow/task runs to [Prefect Cloud](https://app.prefect.cloud):
+
+1. Create an API key in Cloud (Account → API Keys). Put it in gitignored `services/api/.env` as `PREFECT_API_KEY` (see `.env.example`).
+2. From the repo root: `PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"` (pick the workspace if prompted). That writes `PREFECT_API_URL` into the repo `.prefect` profile; copy the URL into `.env` as well.
+3. Re-run `uv run python data/pipelines/pipeline.py --month-start YYYY-MM-DD`. You should **not** see `Starting temporary server`. Refresh Cloud → Flow runs for `monthly_clinic_supply_performance` and the named subflows.
+
+`POST /reporting/pipeline-runs` uses the same profile when the API is started with that `.env`. Tests force the ephemeral server and never use the Cloud key. Do not commit `PREFECT_API_KEY`. Cloud workers / cron remain out of scope.
+
 ---
 
 ## 8. Application integration

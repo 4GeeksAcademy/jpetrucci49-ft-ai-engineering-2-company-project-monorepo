@@ -50,7 +50,7 @@
 13. **M6.5 telemetry** — Backoffice `lib/telemetry/` queues events and POSTs `{ events: [...] }` to `NEXT_PUBLIC_TELEMETRY_ENDPOINT`. FastAPI `POST /telemetry/events` is unauthenticated, validates each envelope independently, and bulk-inserts valid rows into `telemetry_events` (same SQLModel engine as inventory). Response `{ received, stored, rejected }`. `GET /telemetry/report` is authenticated: the route resolves the UTC window (default last 7 days), caches `build_report` for 60s, and does not compute metrics itself. Pipeline: SQL load → Pandas refine/convert/`groupby`. Backoffice `/telemetry` proxies via `/api/telemetry/report`. All UI capture goes through `track()`.
 14. **Monthly clinic supply performance (design)** — Orchestration will live in `data/pipelines/`; transforms in `data/process/`; HTTP in `services/api/reporting/` importing those modules. Destination is `reporting.monthly_clinic_supply_performance`, not `telemetry_events`. See `data/pipelines/PIPELINE_DESIGN.md`. `GET /telemetry/report` stays engineering-only.
 15. **Monthly clinic supply performance (Prefect 3)** — Flow `monthly_clinic_supply_performance` in `data/pipelines/monthly_clinic_supply_performance/`. CLI entry `data/pipelines/pipeline.py`. Transforms in `data/process/` (`clinic_dimension`, `inbound_cost`, `clinic_month_kpis`). Load upserts `(clinic_id, month_start)`. HTTP in `services/api/reporting/` (not `telemetry/`): `GET /reporting/monthly-clinic-supply-performance`, `GET /reporting/pipeline-runs/latest`, `POST /reporting/pipeline-runs`. `GET /telemetry/report` and `telemetry/analysis.py` stay engineering-only.
-16. **Clinic supply subflows + board pack** — Main flow orchestrates named subflows (`extract_monthly_clinic_supply_events`, `transform_monthly_clinic_supply_kpis`, `load_monthly_clinic_supply_performance`, optional `snapshot_monthly_clinic_supply_eval`). Isolated KPI tests: `uv run python -m pytest tests/pipelines/test_pipeline.py` (root `pytest` `testpaths`). Backoffice `/reporting` proxies via `/api/reporting/*` (`INVENTORY_API_URL`); UI maps slugs to clinic labels and does not compute KPIs.
+16. **Clinic supply subflows + board pack** — Main flow orchestrates named subflows (`extract_monthly_clinic_supply_events`, `transform_monthly_clinic_supply_kpis`, `load_monthly_clinic_supply_performance`, optional `snapshot_monthly_clinic_supply_eval`). Isolated KPI tests: `uv run python -m pytest tests/pipelines/test_pipeline.py` (root `pytest` `testpaths`). Backoffice `/reporting` proxies via `/api/reporting/*` (`INVENTORY_API_URL`); UI maps slugs to clinic labels and does not compute KPIs. Optional Prefect Cloud: gitignored `PREFECT_API_KEY` + `PREFECT_API_URL`; `PREFECT_HOME` is repo `.prefect/`. Tests keep the ephemeral server.
 
 ## Technical constraints
 
@@ -83,6 +83,9 @@ uv sync --group dev
 uv run python data/pipelines/pipeline.py
 uv run python data/pipelines/pipeline.py --month-start 2026-08-01
 uv run python -m pytest tests/pipelines/test_pipeline.py
+# Optional Prefect Cloud (after PREFECT_API_KEY in services/api/.env):
+# PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"
+# uv run prefect config view
 
 # HealthCore API (M5–M7)
 cd services/api && uv sync && cp .env.example .env && uv run seed && uv run --env-file .env uvicorn app.main:app --reload --port 8000
