@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text
 
 from jobs.job_runner import (
     JOB_NAME,
+    claim_processing_lock,
     create_run,
     ensure_job_runs_schema,
     get_run,
@@ -108,3 +109,34 @@ def test_schema_creates_index(engine) -> None:
     rows = engine.connect().execute(text("PRAGMA index_list('job_runs')")).fetchall()
     names = {row[1] for row in rows}
     assert "ix_job_runs_job_name_target_date" in names
+
+
+def test_claim_processing_lock_rejects_second_instance(engine) -> None:
+    target = date(2026, 9, 7)
+    first = claim_processing_lock(JOB_NAME, target, engine)
+    second = claim_processing_lock(JOB_NAME, target, engine)
+    assert first is not None
+    assert second is None
+    assert get_run(first, engine)["status"] == "processing"
+    assert has_processing_lock(JOB_NAME, engine) is True
+
+
+def test_claim_processing_lock_concurrent_threads(tmp_path) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    eng = create_engine(
+        f"sqlite:///{tmp_path / 'race.db'}",
+        connect_args={"check_same_thread": False},
+    )
+    ensure_job_runs_schema(eng)
+    target = date(2026, 9, 7)
+
+    def claim() -> str | None:
+        return claim_processing_lock(JOB_NAME, target, eng)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        won = list(pool.map(lambda _: claim(), range(2)))
+    held = [run_id for run_id in won if run_id is not None]
+    assert len(held) == 1
+    assert won.count(None) == 1
+    assert get_run(held[0], eng)["status"] == "processing"

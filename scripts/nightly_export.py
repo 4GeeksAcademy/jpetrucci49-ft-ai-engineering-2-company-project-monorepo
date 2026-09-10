@@ -28,14 +28,15 @@ for _path in (str(_REPO_ROOT), str(_API_ROOT), str(_SERVICES_ROOT)):
 
 from jobs.job_runner import (  # noqa: E402
     JOB_NAME,
-    create_run,
+    _redact,
+    claim_processing_lock,
     ensure_job_runs_schema,
     get_jobs_engine,
+    get_run,
     has_completed_for_date,
     has_processing_lock,
     mark_completed,
     mark_failed,
-    mark_processing,
 )
 from data.pipelines.paths import RAW_DIR  # noqa: E402
 
@@ -229,9 +230,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    run_id = create_run(JOB_NAME, target_date)
-    mark_processing(run_id)
+    run_id = claim_processing_lock(JOB_NAME, target_date)
+    if run_id is None:
+        log_event(
+            logging.INFO,
+            "cancelled",
+            f"aborted silently; {JOB_NAME} already processing",
+        )
+        return 0
+
     log_event(logging.INFO, "processing", f"start target_date={target_date.isoformat()}")
+    error_message: str | None = None
     try:
         export_csv_if_missing(target_date)
         run_pipeline_subprocess(target_date)
@@ -239,12 +248,13 @@ def main(argv: list[str] | None = None) -> int:
         log_event(logging.INFO, "completed", f"finish target_date={target_date.isoformat()}")
         return 0
     except Exception as exc:
-        from inventory.database import redact_secrets
-
-        message = redact_secrets(str(exc))
-        mark_failed(run_id, message)
-        log_event(logging.ERROR, "failed", message)
+        error_message = _redact(str(exc))
+        log_event(logging.ERROR, "failed", error_message)
         return 1
+    finally:
+        row = get_run(run_id)
+        if row is not None and row["status"] == "processing":
+            mark_failed(run_id, error_message or "interrupted while processing")
 
 
 if __name__ == "__main__":

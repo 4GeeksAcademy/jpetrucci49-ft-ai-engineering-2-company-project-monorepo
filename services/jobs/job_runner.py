@@ -123,6 +123,66 @@ def has_completed_for_date(
     return int(count or 0) > 0
 
 
+def claim_processing_lock(
+    job_name: str,
+    target_date: date,
+    engine: Engine | None = None,
+) -> str | None:
+    """Insert pending, then processing, only if no other processing row exists.
+
+    The lock is still `status='processing'` — not a second table or flag.
+    Returns run_id, or None if another instance already holds the lock
+    (caller must abort silently; the pending row is deleted).
+    """
+    engine = ensure_job_runs_schema(engine)
+    table = qualified_job_runs(engine)
+    run_id = str(uuid4())
+    created = _iso(datetime.now(timezone.utc))
+    started = created
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                f"""
+                INSERT INTO {table} (
+                  id, job_name, target_date, status, started_at, finished_at,
+                  error_message, created_at
+                ) VALUES (
+                  :id, :job_name, :target_date, 'pending', NULL, NULL, NULL, :created_at
+                )
+                """
+            ),
+            {
+                "id": run_id,
+                "job_name": job_name,
+                "target_date": target_date.isoformat(),
+                "created_at": created,
+            },
+        )
+        held = conn.execute(
+            text(
+                f"""
+                SELECT COUNT(*) FROM {table}
+                WHERE job_name = :job_name AND status = 'processing' AND id != :id
+                """
+            ),
+            {"job_name": job_name, "id": run_id},
+        ).scalar()
+        if int(held or 0) > 0:
+            conn.execute(text(f"DELETE FROM {table} WHERE id = :id"), {"id": run_id})
+            return None
+        conn.execute(
+            text(
+                f"""
+                UPDATE {table}
+                SET status = 'processing', started_at = :started_at
+                WHERE id = :id
+                """
+            ),
+            {"id": run_id, "started_at": started},
+        )
+    return run_id
+
+
 def create_run(job_name: str, target_date: date, engine: Engine | None = None) -> str:
     engine = ensure_job_runs_schema(engine)
     table = qualified_job_runs(engine)

@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, text
 
 from jobs.job_runner import (
     JOB_NAME,
+    claim_processing_lock,
     create_run,
     ensure_job_runs_schema,
     get_run,
@@ -85,6 +86,45 @@ def test_export_writes_header_only_for_empty_day(tmp_path: Path, engine) -> None
     ]
 
 
+def test_export_writes_telemetry_rows_for_target_date(tmp_path: Path, engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE telemetry_events (
+                  id text PRIMARY KEY,
+                  timestamp text NOT NULL,
+                  service text NOT NULL,
+                  event_type text NOT NULL,
+                  level text NOT NULL,
+                  value text,
+                  message text,
+                  tags text
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO telemetry_events
+                  (id, timestamp, service, event_type, level, value, message, tags)
+                VALUES
+                  ('e1', '2026-09-07 12:00:00', 'backoffice', 'outbound_order_created',
+                   'info', '2', NULL, '{"clinic_id": 2}'),
+                  ('e2', '2026-09-08 00:00:00', 'backoffice', 'outbound_order_created',
+                   'info', '9', NULL, '{}')
+                """
+            )
+        )
+    path = export_csv_if_missing(date(2026, 9, 7), raw_dir=tmp_path, engine=engine)
+    body = path.read_text(encoding="utf-8")
+    assert path.name == "telemetry_2026-09-07.csv"
+    assert "outbound_order_created" in body
+    assert "e1" in body
+    assert "e2" not in body
+
+
 def test_main_aborts_silently_when_processing(
     monkeypatch: pytest.MonkeyPatch, engine
 ) -> None:
@@ -157,12 +197,12 @@ def test_main_marks_failed_when_pipeline_raises(
         lambda name, day: False,
     )
     monkeypatch.setattr(
-        "scripts.nightly_export.create_run",
-        lambda name, day: create_run(name, day, engine),
+        "scripts.nightly_export.claim_processing_lock",
+        lambda name, day: claim_processing_lock(name, day, engine),
     )
     monkeypatch.setattr(
-        "scripts.nightly_export.mark_processing",
-        lambda run_id: mark_processing(run_id, engine),
+        "scripts.nightly_export.get_run",
+        lambda run_id: get_run(run_id, engine),
     )
     failed_ids: list[str] = []
 
