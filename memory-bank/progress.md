@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Prefect subflows + /reporting dashboard_
+_Last updated: Nightly export worker (`job_runs`)_
 
 ## Completed
 
@@ -212,6 +212,14 @@ _Last updated: Prefect subflows + /reporting dashboard_
 - [x] Backoffice `/reporting` — four CONTEXT KPI titles, clinic labels, BFF `/api/reporting/*`; nav **Clinic supply**
 - [x] Overlap lock documented: `begin_pipeline_run` closes leftover `running` rows (`PIPELINE_DESIGN.md` §6 / §7)
 - [x] Optional Prefect Cloud: `PREFECT_API_KEY` / `PREFECT_API_URL` in gitignored `.env`; CLI uses repo `.prefect/` (tests stay ephemeral)
+
+### Nightly export worker (7.1)
+
+- [x] Spec: `specs/07.1_CRON_SPECS.md`
+- [x] `scripts/nightly_export.py` — yesterday UTC (or `TARGET_DATE`); CSV backup; pipeline subprocess `--no-sample`
+- [x] `services/jobs/job_runner.py` + `schema.sql` — `job_runs` (`pending` → `processing` → `completed`/`failed`); lock = `processing`
+- [x] Trigger: `deploy/nightly.crontab` (`5 2 * * *` UTC) and Compose service `nightly` (`scripts/nightly_loop.py`) — not FastAPI
+- [x] Tests: `tests/jobs/` (lock, duplicate skip, failed does not stay `processing`)
 
 ## In progress
 

@@ -42,6 +42,7 @@ data/raw/reporting.db
 data/raw/reporting.db-journal
 data/raw/extract_*.json
 data/raw/kpis_*.json
+data/raw/telemetry_*.csv
 data/eval/monthly_clinic_supply_performance_*.json
 data/eval/last_run.json
 
