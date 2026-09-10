@@ -26,6 +26,31 @@ services:
     networks:
       - healthcore
 
+  # Separate process from Uvicorn. Sleeps until 02:05 UTC then runs
+  # scripts/nightly_export.py. Host/dev alternative: deploy/nightly.crontab.
+  nightly:
+    build:
+      context: ./services
+    command: ["python", "/opt/healthcore/scripts/nightly_loop.py"]
+    working_dir: /opt/healthcore
+    volumes:
+      - ./scripts:/opt/healthcore/scripts
+      - ./data:/opt/healthcore/data
+      - ./services/jobs:/opt/healthcore/services/jobs
+      - ./services/api:/app
+    environment:
+      HEALTHCORE_REPO_ROOT: /opt/healthcore
+      PYTHONPATH: /opt/healthcore:/opt/healthcore/services:/app
+      TZ: UTC
+    env_file:
+      - .env
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - healthcore
+
   ui:
     build:
       context: ./uis

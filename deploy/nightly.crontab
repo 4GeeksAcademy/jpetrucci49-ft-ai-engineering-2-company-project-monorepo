@@ -1,0 +1,8 @@
+# HealthCore nightly_export — host/Codespaces crontab (UTC).
+# Independent of uvicorn. Do not add this to FastAPI lifespan.
+# Install (example): crontab deploy/nightly.crontab
+# Adjust REPO to this checkout. Logs: /tmp/nightly_export.log
+#
+# 02:05 UTC daily so "yesterday" is a closed calendar day.
+
+5 2 * * * cd /workspaces/jpetrucci49-ft-ai-engineering-2-company-project-monorepo && uv run python scripts/nightly_export.py >> /tmp/nightly_export.log 2>&1

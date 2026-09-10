@@ -38,6 +38,8 @@ uv add <package-name>
 | --- | --- | --- |
 | `analyze.py` | M5 | Offline aggregate analysis of `incidents.csv` |
 | `seed_incidents.py` | M11 | Load validated CSV rows into the incident manager TinyDB |
+| `nightly_export.py` | 7.1 | Export yesterday’s `telemetry_events` to CSV and trigger the clinic-supply pipeline |
+| `nightly_loop.py` | 7.1 | Compose worker: sleep until 02:05 UTC, then run `nightly_export.py` |
 
 ---
 
@@ -131,6 +133,28 @@ On failure (missing CSV, parse error, DB error), the script prints a short messa
 After seeding, `GET /api/incidents/summary` should report **94** incidents — status `open` 28, `resolved` 52, `discarded` 14; categories `patient_experience` 61, `billing_error` 20, `other` 13. See `context/11_CONTEXT.md` and [`services/api/README.md`](../services/api/README.md#incident-manager-m11) for API endpoints and UI routes.
 
 Spec: `specs/11_SPECS.md` §9.
+
+---
+
+### `nightly_export.py`
+
+Independent nightly worker (not FastAPI). Exports UTC yesterday’s `telemetry_events` to `data/raw/telemetry_YYYY-MM-DD.csv` if that file is missing, then runs the Milestone 6 pipeline as a **subprocess**. Status and the `processing` lock live in `reporting.job_runs` via `services/jobs/job_runner.py`.
+
+```bash
+# from repo root
+uv run python scripts/nightly_export.py
+TARGET_DATE=2026-09-07 uv run python scripts/nightly_export.py
+```
+
+| Env | Meaning |
+| --- | --- |
+| `TARGET_DATE=YYYY-MM-DD` | Override “yesterday UTC” for tests |
+
+A second run for a **completed** `target_date` exits 0 and skips export + pipeline. A second process while a row is `processing` exits 0 without work. Failures write `failed` (never leave `processing`).
+
+**Trigger:** host crontab `deploy/nightly.crontab` (`5 2 * * *` UTC) or Compose service `nightly` (`scripts/nightly_loop.py`). Do not schedule this inside Uvicorn.
+
+Spec: `specs/07.1_CRON_SPECS.md`.
 
 ---
 
