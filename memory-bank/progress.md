@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Nightly export worker (`job_runs`)_
+_Last updated: Sales forecast (7.2)_
 
 ## Completed
 
@@ -220,6 +220,14 @@ _Last updated: Nightly export worker (`job_runs`)_
 - [x] `services/jobs/job_runner.py` + `schema.sql` — `job_runs` (`pending` → `processing` → `completed`/`failed`); lock = `processing`
 - [x] Trigger: `deploy/nightly.crontab` (`5 2 * * *` UTC) and Compose service `nightly` (`scripts/nightly_loop.py`) — not FastAPI
 - [x] Tests: `tests/jobs/` (lock, duplicate skip, failed does not stay `processing`)
+
+### Sales forecast (7.2)
+
+- [x] Spec: `specs/07.2_TIMESERIES_SPECS.md`; context: `context/07_CONTEXT.md`
+- [x] `data/process/sales_forecast.py` — consolidated `revenue_usd`, causal lags/rolls, 8/2 split, train-only scaler
+- [x] `scripts/forecast_sales.py` — XGBoost (`random_state=42`); MSE / PSI / Gini / K2 on 2024–2025
+- [x] Plot `data/eval/sales_forecast_test.png` (actual vs pred ± train residual band)
+- [x] Tests: `tests/pipelines/test_sales_forecast.py` (split + causal features)
 
 ## In progress
 

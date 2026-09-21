@@ -11,6 +11,7 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "sqlalchemy>=2",
     "sqlmodel>=0.0.39",
+    "statsmodels>=0.15.0",
     "xgboost>=3.4.1",
 ]
 
