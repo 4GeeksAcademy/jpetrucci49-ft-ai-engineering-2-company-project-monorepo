@@ -52,6 +52,7 @@
 15. **Monthly clinic supply performance (Prefect 3)** — Flow `monthly_clinic_supply_performance` in `data/pipelines/monthly_clinic_supply_performance/`. CLI entry `data/pipelines/pipeline.py`. Transforms in `data/process/` (`clinic_dimension`, `inbound_cost`, `clinic_month_kpis`). Load upserts `(clinic_id, month_start)`. HTTP in `services/api/reporting/` (not `telemetry/`): `GET /reporting/monthly-clinic-supply-performance`, `GET /reporting/pipeline-runs/latest`, `POST /reporting/pipeline-runs`. `GET /telemetry/report` and `telemetry/analysis.py` stay engineering-only.
 16. **Clinic supply subflows + board pack** — Main flow orchestrates named subflows (`extract_monthly_clinic_supply_events`, `transform_monthly_clinic_supply_kpis`, `load_monthly_clinic_supply_performance`, optional `snapshot_monthly_clinic_supply_eval`). Isolated KPI tests: `uv run python -m pytest tests/pipelines/test_pipeline.py` (root `pytest` `testpaths`). Backoffice `/reporting` proxies via `/api/reporting/*` (`INVENTORY_API_URL`); UI maps slugs to clinic labels and does not compute KPIs. Optional Prefect Cloud: gitignored `PREFECT_API_KEY` + `PREFECT_API_URL`; `PREFECT_HOME` is repo `.prefect/`. Tests keep the ephemeral server.
 17. **Nightly export (7.1)** — `scripts/nightly_export.py` is a process separate from Uvicorn. It writes `data/raw/telemetry_YYYY-MM-DD.csv` (backup only) and subprocesses `data/pipelines/pipeline.py --month-start <first of month> --no-sample`. Orchestration status is `reporting.job_runs` via `services/jobs/job_runner.py` (not `pipeline_runs`). Lock = a `processing` row. `TARGET_DATE` overrides yesterday UTC. Schedule: crontab `5 2 * * *` UTC (`deploy/nightly.crontab`) or Compose `nightly` (`scripts/nightly_loop.py`). Tests: `uv run python -m pytest tests/jobs`.
+18. **Sales forecast (7.2)** — `scripts/forecast_sales.py` loads `data/raw/healthcore_sales.csv` (`region == consolidated`, target `revenue_usd`). Causal features and the 8-year / 2-year split live in `data/process/sales_forecast.py`. Model is XGBoost (`random_state=42`). Artifacts: `data/eval/sales_forecast_metrics.json` and `data/eval/sales_forecast_test.png`. Tests: `tests/pipelines/test_sales_forecast.py`.
 
 ## Technical constraints
 
@@ -87,6 +88,8 @@ uv run python -m pytest tests/pipelines/test_pipeline.py
 uv run python -m pytest tests/jobs
 uv run python scripts/nightly_export.py
 # TARGET_DATE=2026-09-07 uv run python scripts/nightly_export.py
+uv run python scripts/forecast_sales.py
+uv run python -m pytest tests/pipelines/test_sales_forecast.py
 # Optional Prefect Cloud (after PREFECT_API_KEY in services/api/.env):
 # PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"
 # uv run prefect config view

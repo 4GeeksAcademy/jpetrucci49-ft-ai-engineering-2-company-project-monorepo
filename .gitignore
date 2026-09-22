@@ -48,6 +48,7 @@ data/eval/last_run.json
 
 # Python (uv)
 .venv/
+.venv-local/
 __pycache__/
 *.py[cod]
 .python-version.local

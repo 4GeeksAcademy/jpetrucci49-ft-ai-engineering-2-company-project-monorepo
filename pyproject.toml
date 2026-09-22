@@ -4,11 +4,15 @@ version = "0.1.0"
 description = "HealthCore monorepo — Python scripts for data analysis and automation"
 requires-python = ">=3.12"
 dependencies = [
+    "matplotlib>=3.11.2",
     "pandas>=3.0.5",
     "prefect>=3,<4",
     "psycopg[binary]>=3.3.4",
+    "scikit-learn>=1.9.1",
     "sqlalchemy>=2",
     "sqlmodel>=0.0.39",
+    "statsmodels>=0.15.0",
+    "xgboost>=3.4.1",
 ]
 
 [tool.uv]

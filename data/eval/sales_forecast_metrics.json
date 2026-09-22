@@ -1,0 +1,10 @@
+{
+  "mse": 35142744509.181305,
+  "mse_pct_of_avg_revenue": 5.568250757247553,
+  "psi_visits_count": 3.9069409863497433,
+  "psi_revenue_usd": 3.0459851120279327,
+  "gini": 0.7777777777777781,
+  "k2_score": 0.25,
+  "test_mean_revenue_usd": 3366658.4008333334,
+  "test_rows": 24
+}

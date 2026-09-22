@@ -40,6 +40,7 @@ uv add <package-name>
 | `seed_incidents.py` | M11 | Load validated CSV rows into the incident manager TinyDB |
 | `nightly_export.py` | 7.1 | Export yesterday’s `telemetry_events` to CSV and trigger the clinic-supply pipeline |
 | `nightly_loop.py` | 7.1 | Compose worker: sleep until 02:05 UTC, then run `nightly_export.py` |
+| `forecast_sales.py` | 7.2 | Train XGBoost on consolidated `revenue_usd`; write test metrics and plot |
 
 ---
 
@@ -155,6 +156,25 @@ A second run for a **completed** `target_date` exits 0 and skips export + pipeli
 **Trigger:** host crontab `deploy/nightly.crontab` (`5 2 * * *` UTC) or Compose service `nightly` (`scripts/nightly_loop.py`). Do not schedule this inside Uvicorn.
 
 Spec: `specs/07.1_CRON_SPECS.md`.
+
+---
+
+### `forecast_sales.py`
+
+Trains one XGBoost model on HealthCore **consolidated** monthly `revenue_usd` (`data/raw/healthcore_sales.csv`). First 8 years train, last 2 years test. Causal lags/rolls only. Writes metrics and the 2024–2025 plot under `data/eval/`.
+
+```bash
+# from repo root
+uv sync
+uv run python scripts/forecast_sales.py
+```
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Metrics and plot written |
+| `1` | Load, feature, fit, or I/O failure (message on stderr) |
+
+Report: [`data/pipelines/sales_forecast/README.md`](../data/pipelines/sales_forecast/README.md). Spec: `specs/07.2_TIMESERIES_SPECS.md`.
 
 ---
 
