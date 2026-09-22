@@ -13,7 +13,13 @@ uv run python scripts/forecast_sales.py
 
 Writes `data/eval/sales_forecast_metrics.json` and `data/eval/sales_forecast_test.png`. Regenerate the plot by re-running the script.
 
-Logic lives in `data/process/sales_forecast.py` (not in the CLI). Tests: `uv run python -m pytest tests/pipelines/test_sales_forecast.py -q`.
+```bash
+uv run python scripts/evaluate_sales_forecast.py
+```
+
+Train-window diagnosis (2016–2023 only): 5-fold `TimeSeriesSplit`, learning curve, `data/eval/evaluation_report.md`. Spec: `specs/07.3_EVALUATION_SPECS.md`.
+
+Logic lives in `data/process/sales_forecast.py` / `sales_forecast_eval.py` (not in the CLI). Tests: `uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py -q`.
 
 ## Algorithm
 

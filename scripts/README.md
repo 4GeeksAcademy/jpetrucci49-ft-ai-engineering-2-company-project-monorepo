@@ -41,6 +41,7 @@ uv add <package-name>
 | `nightly_export.py` | 7.1 | Export yesterday’s `telemetry_events` to CSV and trigger the clinic-supply pipeline |
 | `nightly_loop.py` | 7.1 | Compose worker: sleep until 02:05 UTC, then run `nightly_export.py` |
 | `forecast_sales.py` | 7.2 | Train XGBoost on consolidated `revenue_usd`; write test metrics and plot |
+| `evaluate_sales_forecast.py` | 7.3 | 5-fold temporal CV + learning curve on 2016–2023; write diagnosis report |
 
 ---
 
@@ -175,6 +176,25 @@ uv run python scripts/forecast_sales.py
 | `1` | Load, feature, fit, or I/O failure (message on stderr) |
 
 Report: [`data/pipelines/sales_forecast/README.md`](../data/pipelines/sales_forecast/README.md). Spec: `specs/07.2_TIMESERIES_SPECS.md`.
+
+---
+
+### `evaluate_sales_forecast.py`
+
+5-fold temporal CV and a learning curve on **2016–2023** only (the 2024–2025 holdout is not used). Writes `data/eval/sales_forecast_cv_metrics.json`, `data/eval/sales_forecast_learning_curve.png`, and `data/eval/evaluation_report.md`.
+
+```bash
+# from repo root
+uv sync
+uv run python scripts/evaluate_sales_forecast.py
+```
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | CV metrics, curve, and report written |
+| `1` | Load, CV, or I/O failure (message on stderr) |
+
+Spec: `specs/07.3_EVALUATION_SPECS.md`.
 
 ---
 

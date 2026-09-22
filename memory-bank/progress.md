@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Sales forecast (7.2)_
+_Last updated: Sales forecast evaluation (7.3)_
 
 ## Completed
 
@@ -228,6 +228,13 @@ _Last updated: Sales forecast (7.2)_
 - [x] `scripts/forecast_sales.py` — XGBoost (`random_state=42`); MSE / PSI / Gini / K2 on 2024–2025
 - [x] Plot `data/eval/sales_forecast_test.png` (actual vs pred ± train residual band)
 - [x] Tests: `tests/pipelines/test_sales_forecast.py` (split + causal features)
+
+### Sales forecast evaluation (7.3)
+
+- [x] Spec: `specs/07.3_EVALUATION_SPECS.md`
+- [x] `data/process/sales_forecast_eval.py` — 5-fold prefix-safe `TimeSeriesSplit` on 2016–2023; MAE/RMSE mean±std
+- [x] Learning curve `data/eval/sales_forecast_learning_curve.png`; report `data/eval/evaluation_report.md`
+- [x] Tests: `tests/pipelines/test_sales_forecast_cv.py` (chronological folds)
 
 ## In progress
 
