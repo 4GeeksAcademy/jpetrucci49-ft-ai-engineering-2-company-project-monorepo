@@ -15,6 +15,7 @@ const navItems = [
   { href: "/inventory/products", label: "Supplies" },
   { href: "/inventory/orders", label: "Movements" },
   { href: "/reporting", label: "Clinic supply" },
+  { href: "/knowledge", label: "Desk knowledge" },
   { href: "/telemetry", label: "Telemetry" },
   { href: crossAppNav.paths.backofficeUtilities, label: crossAppNavLabels.utilities },
   { href: "/account/profile", label: "Account" },

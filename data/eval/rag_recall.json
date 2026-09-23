@@ -1,0 +1,87 @@
+{
+  "hits": 8,
+  "n": 8,
+  "recall_at_3": 1.0,
+  "details": [
+    {
+      "question": "Which commercial insurers does HealthCore accept in the United States?",
+      "expected_source_document": "insurance-coverage",
+      "hit": true,
+      "top_sources": [
+        "new-patient-checklist",
+        "insurance-coverage",
+        "insurance-coverage"
+      ]
+    },
+    {
+      "question": "Is Medicaid accepted at Georgia clinics?",
+      "expected_source_document": "insurance-coverage",
+      "hit": true,
+      "top_sources": [
+        "insurance-coverage",
+        "referral-process",
+        "referral-process"
+      ]
+    },
+    {
+      "question": "Is there a charge for cancelling 12 hours in advance?",
+      "expected_source_document": "appointment-policy",
+      "hit": true,
+      "top_sources": [
+        "appointment-policy",
+        "insurance-coverage",
+        "new-patient-checklist"
+      ]
+    },
+    {
+      "question": "Do Medicare or Medicaid patients pay a no-show fee?",
+      "expected_source_document": "appointment-policy",
+      "hit": true,
+      "top_sources": [
+        "appointment-policy",
+        "insurance-coverage",
+        "insurance-coverage"
+      ]
+    },
+    {
+      "question": "How long should an internal specialist referral take to a confirmed appointment?",
+      "expected_source_document": "referral-process",
+      "hit": true,
+      "top_sources": [
+        "referral-process",
+        "referral-process",
+        "new-patient-checklist"
+      ]
+    },
+    {
+      "question": "Who should I escalate to if a patient has no referral appointment options after 5 business days?",
+      "expected_source_document": "referral-process",
+      "hit": true,
+      "top_sources": [
+        "referral-process",
+        "referral-process",
+        "appointment-policy"
+      ]
+    },
+    {
+      "question": "What documents should the patient bring on the day of the appointment?",
+      "expected_source_document": "new-patient-checklist",
+      "hit": true,
+      "top_sources": [
+        "new-patient-checklist",
+        "referral-process",
+        "new-patient-checklist"
+      ]
+    },
+    {
+      "question": "Can a new patient still be seen if they have not finished the medical history form?",
+      "expected_source_document": "new-patient-checklist",
+      "hit": true,
+      "top_sources": [
+        "new-patient-checklist",
+        "new-patient-checklist",
+        "referral-process"
+      ]
+    }
+  ]
+}

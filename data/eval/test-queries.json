@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Which commercial insurers does HealthCore accept in the United States?",
+    "expected_source_document": "insurance-coverage",
+    "expected_text_contains": "Blue Cross Blue Shield"
+  },
+  {
+    "question": "Is Medicaid accepted at Georgia clinics?",
+    "expected_source_document": "insurance-coverage",
+    "expected_text_contains": "Georgia"
+  },
+  {
+    "question": "Is there a charge for cancelling 12 hours in advance?",
+    "expected_source_document": "appointment-policy",
+    "expected_text_contains": "less than 24 hours"
+  },
+  {
+    "question": "Do Medicare or Medicaid patients pay a no-show fee?",
+    "expected_source_document": "appointment-policy",
+    "expected_text_contains": "Medicare or Medicaid"
+  },
+  {
+    "question": "How long should an internal specialist referral take to a confirmed appointment?",
+    "expected_source_document": "referral-process",
+    "expected_text_contains": "11 days"
+  },
+  {
+    "question": "Who should I escalate to if a patient has no referral appointment options after 5 business days?",
+    "expected_source_document": "referral-process",
+    "expected_text_contains": "Marcus Reid"
+  },
+  {
+    "question": "What documents should the patient bring on the day of the appointment?",
+    "expected_source_document": "new-patient-checklist",
+    "expected_text_contains": "Insurance card"
+  },
+  {
+    "question": "Can a new patient still be seen if they have not finished the medical history form?",
+    "expected_source_document": "new-patient-checklist",
+    "expected_text_contains": "medical history form"
+  }
+]
