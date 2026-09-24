@@ -42,6 +42,8 @@ uv add <package-name>
 | `nightly_loop.py` | 7.1 | Compose worker: sleep until 02:05 UTC, then run `nightly_export.py` |
 | `forecast_sales.py` | 7.2 | Train XGBoost on consolidated `revenue_usd`; write test metrics and plot |
 | `evaluate_sales_forecast.py` | 7.3 | 5-fold temporal CV + learning curve on 2016–2023; write diagnosis report |
+| `index_knowledge.py` | 7.5 | Chunk and upsert HealthCore policies into Qdrant `healthcore_knowledge` |
+| `eval_rag_recall.py` | 7.5 | Recall@3 on `data/eval/test-queries.json` (must be ≥ 80%) |
 
 ---
 
@@ -195,6 +197,28 @@ uv run python scripts/evaluate_sales_forecast.py
 | `1` | Load, CV, or I/O failure (message on stderr) |
 
 Spec: `specs/07.3_EVALUATION_SPECS.md`.
+
+---
+
+### `index_knowledge.py`
+
+Chunks the four CONTEXT policy files and upserts them into Qdrant collection `healthcore_knowledge` (deterministic UUID5 IDs).
+
+```bash
+uv run python scripts/index_knowledge.py
+```
+
+Writes to `QDRANT_URL` (default `http://127.0.0.1:6333`, Compose service `qdrant`). Use `QDRANT_URL=:memory:` only for offline/process-local runs. Spec: `specs/07.5_RAG_SPECS.md`.
+
+---
+
+### `eval_rag_recall.py`
+
+Re-indexes, then measures Recall@3 on `data/eval/test-queries.json`. Writes `data/eval/rag_recall.json`. Exit 1 if recall &lt; 80%.
+
+```bash
+uv run python scripts/eval_rag_recall.py
+```
 
 ---
 

@@ -7,6 +7,7 @@ Reusable transforms:
 - `clinic_month_kpis.py` — the four CONTEXT KPIs at clinic × month
 - `sales_forecast.py` — causal features, 8/2 split, XGBoost forecast of consolidated `revenue_usd`
 - `sales_forecast_eval.py` — prefix-safe `TimeSeriesSplit` (5 folds) and learning curve on train years only
+- `rag.py` — `setup()` / `embed()` for `healthcore_knowledge` (desk policies)
 
 This folder contains **processed/intermediate data** and/or artifacts produced by pipelines (for example: clean datasets, features, aggregates, intermediate tables, or transformation outputs).
 

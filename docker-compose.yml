@@ -1,16 +1,31 @@
 services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - healthcore
+
   api:
     build:
       context: ./services
     volumes:
       - ./services/api:/app
       - ./data:/opt/healthcore/data
+      - ./docs:/opt/healthcore/docs
+      - .:/opt/healthcore
     environment:
       HEALTHCORE_REPO_ROOT: /opt/healthcore
+      PYTHONPATH: /opt/healthcore:/app
+      QDRANT_URL: http://qdrant:6333
     ports:
       - "8000:8000"
     env_file:
       - .env
+    depends_on:
+      - qdrant
     healthcheck:
       test:
         [
@@ -76,6 +91,7 @@ services:
       - healthcore
 
 volumes:
+  qdrant_data:
   website_node_modules:
   backoffice_node_modules:
   website_next:

@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Sales forecast evaluation (7.3)_
+_Last updated: Desk knowledge RAG (7.5)_
 
 ## Completed
 
@@ -235,6 +235,15 @@ _Last updated: Sales forecast evaluation (7.3)_
 - [x] `data/process/sales_forecast_eval.py` — 5-fold prefix-safe `TimeSeriesSplit` on 2016–2023; MAE/RMSE mean±std
 - [x] Learning curve `data/eval/sales_forecast_learning_curve.png`; report `data/eval/evaluation_report.md`
 - [x] Tests: `tests/pipelines/test_sales_forecast_cv.py` (chronological folds)
+
+### Desk knowledge RAG (7.5)
+
+- [x] Spec: `specs/07.5_RAG_SPECS.md`; context: `context/07.5_RAG_CONTEXT.md`
+- [x] Corpus in `docs/company-knowledge-base/`; Qdrant collection `healthcore_knowledge`
+- [x] `setup()` / `embed()` in `data/process/rag.py`; `retrieve()` / `generate_answer()` / `query()` in `data/pipelines/rag.py`
+- [x] `POST /knowledge/query` + backoffice `/knowledge` (Desk knowledge)
+- [x] Tests: `tests/pipelines/test_rag.py`; Recall@3 via `scripts/eval_rag_recall.py`
+- [x] Design: `docs/rag/rag-design.md`
 
 ## In progress
 
