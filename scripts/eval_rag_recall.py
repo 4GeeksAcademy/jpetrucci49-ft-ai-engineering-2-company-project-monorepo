@@ -4,15 +4,28 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
+
+import httpx
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from data.pipelines.rag import retrieve  # noqa: E402
-from data.process.rag import setup  # noqa: E402
+from data.process.rag import DEFAULT_QDRANT_URL, setup  # noqa: E402
+
+
+def _use_memory_if_qdrant_down() -> None:
+    """Offline Recall@3: keep :memory: when no live Qdrant is configured."""
+    if os.environ.get("QDRANT_URL", "").strip():
+        return
+    try:
+        httpx.get(f"{DEFAULT_QDRANT_URL}/readyz", timeout=1.0)
+    except Exception:
+        os.environ["QDRANT_URL"] = ":memory:"
 
 QUERIES = REPO_ROOT / "data" / "eval" / "test-queries.json"
 OUT = REPO_ROOT / "data" / "eval" / "rag_recall.json"
@@ -28,6 +41,7 @@ def _is_hit(row: dict, expected_source: str, needle: str | None) -> bool:
 
 
 def main() -> int:
+    _use_memory_if_qdrant_down()
     setup()
     questions = json.loads(QUERIES.read_text(encoding="utf-8"))
     hits = 0

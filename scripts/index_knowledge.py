@@ -10,12 +10,27 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from data.process.rag import COLLECTION, setup  # noqa: E402
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(REPO_ROOT / ".env")
+    load_dotenv(REPO_ROOT / "services" / "api" / ".env", override=True)
+except ImportError:
+    pass
+
+from data.process.rag import (  # noqa: E402
+    COLLECTION,
+    qdrant_url,
+    rag_api_key,
+    setup,
+)
 
 
 def main() -> int:
+    target = qdrant_url()
+    mode = "API embeddings" if rag_api_key() else "local hashed embeddings"
     count = setup()
-    print(f"Indexed {count} chunks into {COLLECTION}")
+    print(f"Indexed {count} chunks into {COLLECTION} at {target} ({mode})")
     return 0
 
 

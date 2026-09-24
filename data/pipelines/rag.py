@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import os
+import time
 from typing import Any
 
 import httpx
@@ -12,11 +12,53 @@ from data.process.rag import (
     COLLECTION,
     DEFAULT_MIN_SCORE,
     embed,
-    generation_model_id,
+    chat_model_candidates,
     get_qdrant_client,
+    provider_http_error,
     rag_api_key,
     rag_base_url,
 )
+
+
+def _points_from_client(qdrant: Any, vector: list[float], k: int) -> list[Any]:
+    try:
+        if hasattr(qdrant, "query_points"):
+            return qdrant.query_points(
+                collection_name=COLLECTION,
+                query=vector,
+                limit=k,
+                with_payload=True,
+            ).points
+        return qdrant.search(
+            collection_name=COLLECTION,
+            query_vector=vector,
+            limit=k,
+            with_payload=True,
+        )
+    except ValueError as exc:
+        if "not found" in str(exc).lower():
+            raise RuntimeError(
+                f"Qdrant collection {COLLECTION} is not indexed. "
+                "Start Qdrant and run: uv run python scripts/index_knowledge.py"
+            ) from exc
+        raise
+    except Exception as exc:
+        status = getattr(exc, "status_code", None)
+        text = str(exc).lower()
+        if status == 404 or "not found" in text or "doesn't exist" in text:
+            raise RuntimeError(
+                f"Qdrant collection {COLLECTION} is not indexed. "
+                "Start Qdrant and run: uv run python scripts/index_knowledge.py"
+            ) from exc
+        if any(
+            token in text
+            for token in ("connect", "connection refused", "timed out", "name or service")
+        ):
+            raise RuntimeError(
+                "Cannot reach Qdrant. Start it with `docker compose up -d qdrant` "
+                "and set QDRANT_URL (default http://127.0.0.1:6333)."
+            ) from exc
+        raise
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +92,7 @@ def retrieve(
     floor = DEFAULT_MIN_SCORE if min_score is None else min_score
     vector = embed(query)
     qdrant = client if client is not None else get_qdrant_client()
-    if hasattr(qdrant, "query_points"):
-        hits = qdrant.query_points(
-            collection_name=COLLECTION,
-            query=vector,
-            limit=k,
-            with_payload=True,
-        ).points
-    else:
-        hits = qdrant.search(
-            collection_name=COLLECTION,
-            query_vector=vector,
-            limit=k,
-            with_payload=True,
-        )
+    hits = _points_from_client(qdrant, vector, k)
     results: list[dict[str, Any]] = []
     for hit in hits:
         score = float(hit.score) if hit.score is not None else 0.0
@@ -100,26 +129,43 @@ def generate_answer(question: str, context: list[dict[str, Any]]) -> str:
     key = rag_api_key()
     if not key:
         raise RuntimeError(
-            "RAG_API_KEY / FOURGEEKS_API_KEY / OPENAI_API_KEY is required to generate answers"
+            "LLM_API_KEY / RAG_API_KEY / FOURGEEKS_API_KEY / OPENAI_API_KEY is required to generate answers"
         )
     user = (
         f"Coordinator question:\n{question.strip()}\n\n"
         f"Retrieved HealthCore policy context:\n{_format_context(context)}"
     )
-    response = httpx.post(
-        f"{rag_base_url()}/chat/completions",
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={
-            "model": generation_model_id(),
-            "temperature": 0.2,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user},
-            ],
-        },
-        timeout=45.0,
-    )
-    response.raise_for_status()
+    response: httpx.Response | None = None
+    last_error: httpx.Response | None = None
+    for model in chat_model_candidates():
+        for attempt in range(4):
+            response = httpx.post(
+                f"{rag_base_url()}/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "temperature": 0.2,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user},
+                    ],
+                },
+                timeout=45.0,
+            )
+            if response.status_code == 429 and attempt < 3:
+                time.sleep(2 ** attempt)
+                continue
+            break
+        assert response is not None
+        if response.status_code in {400, 404} and "model" in (response.text or "").lower():
+            last_error = response
+            logger.warning("chat model %s unavailable (%s); trying next catalog id", model, response.status_code)
+            continue
+        last_error = response
+        break
+    assert response is not None
+    if response.is_error:
+        raise provider_http_error("Chat completions", last_error or response)
     content = response.json()["choices"][0]["message"]["content"]
     return str(content).strip()
 

@@ -208,7 +208,7 @@ Chunks the four CONTEXT policy files and upserts them into Qdrant collection `he
 uv run python scripts/index_knowledge.py
 ```
 
-Needs `QDRANT_URL` for a running Qdrant (Compose service `qdrant`). Without it, uses an in-process memory client (same process only). Spec: `specs/07.5_RAG_SPECS.md`.
+Writes to `QDRANT_URL` (default `http://127.0.0.1:6333`, Compose service `qdrant`). Use `QDRANT_URL=:memory:` only for offline/process-local runs. Spec: `specs/07.5_RAG_SPECS.md`.
 
 ---
 

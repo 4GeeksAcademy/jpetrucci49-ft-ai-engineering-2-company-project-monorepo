@@ -1,4 +1,19 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+import sys
+
+# Repo root so `data.pipelines` / `data.process` resolve when uvicorn cwd is services/api.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_REPO_ROOT / ".env")
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
+except ImportError:
+    pass
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError

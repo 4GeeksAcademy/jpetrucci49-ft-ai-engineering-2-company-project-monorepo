@@ -54,7 +54,7 @@
 17. **Nightly export (7.1)** — `scripts/nightly_export.py` is a process separate from Uvicorn. It writes `data/raw/telemetry_YYYY-MM-DD.csv` (backup only) and subprocesses `data/pipelines/pipeline.py --month-start <first of month> --no-sample`. Orchestration status is `reporting.job_runs` via `services/jobs/job_runner.py` (not `pipeline_runs`). Lock = a `processing` row. `TARGET_DATE` overrides yesterday UTC. Schedule: crontab `5 2 * * *` UTC (`deploy/nightly.crontab`) or Compose `nightly` (`scripts/nightly_loop.py`). Tests: `uv run python -m pytest tests/jobs`.
 18. **Sales forecast (7.2)** — `scripts/forecast_sales.py` loads `data/raw/healthcore_sales.csv` (`region == consolidated`, target `revenue_usd`). Causal features and the 8-year / 2-year split live in `data/process/sales_forecast.py`. Model is XGBoost (`random_state=42`). Artifacts: `data/eval/sales_forecast_metrics.json` and `data/eval/sales_forecast_test.png`. Tests: `tests/pipelines/test_sales_forecast.py`.
 19. **Sales forecast evaluation (7.3)** — `scripts/evaluate_sales_forecast.py` runs prefix-safe `TimeSeriesSplit` (5 folds) and a learning curve on **2016–2023 only**. Logic in `data/process/sales_forecast_eval.py`. Artifacts: `data/eval/sales_forecast_cv_metrics.json`, `sales_forecast_learning_curve.png`, `evaluation_report.md`. Tests: `tests/pipelines/test_sales_forecast_cv.py`.
-20. **Desk knowledge RAG (7.5)** — Four CONTEXT policy files in `docs/company-knowledge-base/`. `setup()`/`embed()` in `data/process/rag.py`; `retrieve()`/`generate_answer()`/`query()` in `data/pipelines/rag.py`. Qdrant collection `healthcore_knowledge` (Compose service `qdrant`, port 6333). `POST /knowledge/query` returns `{ answer }` only. Backoffice `/knowledge`. Tests: `tests/pipelines/test_rag.py`. Recall@3: `scripts/eval_rag_recall.py`.
+20. **Desk knowledge RAG (7.5)** — Four CONTEXT policy files in `docs/company-knowledge-base/`. `setup()`/`embed()` in `data/process/rag.py`; `retrieve()`/`generate_answer()`/`query()` in `data/pipelines/rag.py`. Course secrets: `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`. Qdrant collection `healthcore_knowledge` (Compose service `qdrant`, port 6333). `POST /knowledge/query` returns `{ answer }` only. Backoffice `/knowledge`. Tests: `tests/pipelines/test_rag.py`. Recall@3: `scripts/eval_rag_recall.py`.
 
 ## Technical constraints
 
@@ -99,7 +99,8 @@ uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/t
 # PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"
 # uv run prefect config view
 
-# HealthCore API (M5–M7)
+# HealthCore API (M5–M7). `app.main` puts the repo root on sys.path so
+# `data.pipelines` imports work when cwd is services/api. `dev:api` also sets PYTHONPATH.
 cd services/api && uv sync && cp .env.example .env && uv run seed && uv run --env-file .env uvicorn app.main:app --reload --port 8000
 npm run dev:api
 uv run --directory services/api seed   # from repo root

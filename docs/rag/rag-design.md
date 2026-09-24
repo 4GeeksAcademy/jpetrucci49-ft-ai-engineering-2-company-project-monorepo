@@ -58,9 +58,9 @@ Payload fields match CONTEXT §3: `company=healthcore`, `language=en`, `source_d
 | Role | Model ID | Notes |
 | --- | --- | --- |
 | Embeddings | `text-embedding-3-small` (`RAG_EMBEDDING_MODEL`) | 4Geeks student OpenAI-compatible embeddings. Used by **`embed()`** for chunks **and** questions. |
-| Generation | `gpt-4o-mini` (`RAG_GENERATION_MODEL`) | Different ID. Chat completions only, in `generate_answer()`. |
+| Generation | `gpt-4o-mini` (`LLM_MODEL` / `RAG_GENERATION_MODEL`) | Different ID. Chat completions only, in `generate_answer()`. |
 
-Set `RAG_API_KEY` or `FOURGEEKS_API_KEY` and optional `RAG_BASE_URL` / `FOURGEEKS_BASE_URL`. If no key is set, `embed()` falls back to a **384-d hashed character 3-gram** (L2-normalized) so local index/Recall@3 still run; `generate_answer()` still requires a key (empty retrieve returns the honest “not enough information” string without an LLM).
+Course secrets: `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL` (4Geeks RAG lesson). Aliases: `RAG_API_KEY` / `FOURGEEKS_API_KEY` and `RAG_BASE_URL` / `FOURGEEKS_BASE_URL`. If no key is set, `embed()` falls back to a **384-d hashed character 3-gram** (L2-normalized) so local index/Recall@3 still run; `generate_answer()` still requires a key (empty retrieve returns the honest “not enough information” string without an LLM). Index and the API share `QDRANT_URL` (default `http://127.0.0.1:6333`). `QDRANT_URL=:memory:` is offline/tests only — an in-memory collection is not visible to uvicorn. The API loads repo-root `.env` then `services/api/.env`.
 
 | Qdrant | Value |
 | --- | --- |
