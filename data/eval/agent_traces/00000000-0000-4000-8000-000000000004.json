@@ -1,0 +1,8 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000004",
+  "path": ["intake", "retrieve_policy", "generate_policy"],
+  "question": "Do Medicare or Medicaid patients pay a no-show fee?",
+  "context_sources": ["appointment-policy"],
+  "answer": "Medicare or Medicaid patients are not charged a no-show or late-cancellation fee.",
+  "error": null
+}
