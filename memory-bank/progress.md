@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk knowledge RAG (7.5)_
+_Last updated: Desk agent graph (7.6)_
 
 ## Completed
 
@@ -244,6 +244,16 @@ _Last updated: Desk knowledge RAG (7.5)_
 - [x] `POST /knowledge/query` + backoffice `/knowledge` (Desk knowledge)
 - [x] Tests: `tests/pipelines/test_rag.py`; Recall@3 via `scripts/eval_rag_recall.py`
 - [x] Design: `docs/rag/rag-design.md`
+
+### Desk agent graph (7.6)
+
+- [x] Spec: `specs/07.6_LANGGRAPH_SPECS.md`; same CONTEXT as 7.5
+- [x] Compiled LangGraph in `services/api/agent/` — `DeskAgentState`, five named nodes, `MemorySaver`
+- [x] Nodes call `retrieve()` and `generate_answer(question, context)` separately; no `query()` in a node
+- [x] Conditional edges: empty question → `reject`; empty retrieve → `refuse` (`NO_INFORMATION`)
+- [x] Traces: `data/eval/agent_traces/{run_id}.json`; `POST /agent/query` + `GET /agent/traces/{run_id}`
+- [x] `POST /knowledge/query` unchanged
+- [x] Tests: `tests/pipelines/test_agent_graph.py` (path + Medicare grounding); `test_rag.py` still required
 
 ## In progress
 

@@ -1,0 +1,8 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "path": ["intake", "retrieve_policy", "generate_policy"],
+  "question": "Is there a charge for cancelling 12 hours in advance?",
+  "context_sources": ["appointment-policy"],
+  "answer": "For private-pay patients, cancelling less than 24 hours in advance is 50 USD in the United States or 40 GBP in the United Kingdom.",
+  "error": null
+}

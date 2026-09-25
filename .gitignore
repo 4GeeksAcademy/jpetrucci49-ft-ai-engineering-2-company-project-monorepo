@@ -37,6 +37,13 @@ uis/**/next-env.d.ts
 # Prefect local home (pipeline CLI)
 .prefect/
 
+# Runtime desk-agent traces (keep committed fixtures)
+data/eval/agent_traces/*
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000001.json
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000002.json
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000003.json
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000004.json
+
 # Pipeline local artifacts (keep committed samples)
 data/raw/reporting.db
 data/raw/reporting.db-journal

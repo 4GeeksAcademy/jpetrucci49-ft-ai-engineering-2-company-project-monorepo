@@ -26,6 +26,7 @@ from app.incidents.router import router as incidents_router
 from auth.config import get_jwt_secret, validate_password_reset_config
 from inventory.database import init_inventory_schema
 from inventory.router import router as inventory_router
+from agent.router import router as agent_router
 from knowledge.router import router as knowledge_router
 from reporting.router import router as reporting_router
 from routes.auth import router as auth_router
@@ -99,6 +100,7 @@ app.include_router(inventory_router)
 app.include_router(telemetry_router)
 app.include_router(reporting_router)
 app.include_router(knowledge_router)
+app.include_router(agent_router)
 
 
 @app.get("/health", include_in_schema=False)

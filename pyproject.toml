@@ -15,6 +15,7 @@ dependencies = [
     "sqlmodel>=0.0.39",
     "statsmodels>=0.15.0",
     "xgboost>=3.4.1",
+    "langgraph>=1.2.12",
 ]
 
 [tool.uv]
@@ -27,4 +28,4 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests/pipelines", "tests/jobs"]
-pythonpath = ["."]
+pythonpath = [".", "services/api"]

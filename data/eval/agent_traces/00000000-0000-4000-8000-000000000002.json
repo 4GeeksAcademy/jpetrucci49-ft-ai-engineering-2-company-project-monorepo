@@ -1,0 +1,8 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000002",
+  "path": ["intake", "reject"],
+  "question": "",
+  "context_sources": [],
+  "answer": "",
+  "error": "question must not be empty"
+}

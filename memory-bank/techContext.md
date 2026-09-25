@@ -55,6 +55,7 @@
 18. **Sales forecast (7.2)** — `scripts/forecast_sales.py` loads `data/raw/healthcore_sales.csv` (`region == consolidated`, target `revenue_usd`). Causal features and the 8-year / 2-year split live in `data/process/sales_forecast.py`. Model is XGBoost (`random_state=42`). Artifacts: `data/eval/sales_forecast_metrics.json` and `data/eval/sales_forecast_test.png`. Tests: `tests/pipelines/test_sales_forecast.py`.
 19. **Sales forecast evaluation (7.3)** — `scripts/evaluate_sales_forecast.py` runs prefix-safe `TimeSeriesSplit` (5 folds) and a learning curve on **2016–2023 only**. Logic in `data/process/sales_forecast_eval.py`. Artifacts: `data/eval/sales_forecast_cv_metrics.json`, `sales_forecast_learning_curve.png`, `evaluation_report.md`. Tests: `tests/pipelines/test_sales_forecast_cv.py`.
 20. **Desk knowledge RAG (7.5)** — Four CONTEXT policy files in `docs/company-knowledge-base/`. `setup()`/`embed()` in `data/process/rag.py`; `retrieve()`/`generate_answer()`/`query()` in `data/pipelines/rag.py`. Course secrets: `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`. Qdrant collection `healthcore_knowledge` (Compose service `qdrant`, port 6333). `POST /knowledge/query` returns `{ answer }` only. Backoffice `/knowledge`. Tests: `tests/pipelines/test_rag.py`. Recall@3: `scripts/eval_rag_recall.py`.
+21. **Desk agent graph (7.6)** — LangGraph control plane over 7.5 retrieve/generate. Compiled at import in `services/api/agent/graph.py` (`desk_graph` + `MemorySaver`). State keys only: `run_id`, `question`, `context`, `answer`, `error`. Nodes: `intake` → (`reject` | `retrieve_policy` → (`refuse` | `generate_policy`)). Every run writes `data/eval/agent_traces/{run_id}.json`. HTTP: JWT `POST /agent/query` → `{ answer, run_id }`; `GET /agent/traces/{run_id}`. `/knowledge/query` still calls `query()`. Tests: `tests/pipelines/test_agent_graph.py`.
 
 ## Technical constraints
 
@@ -95,6 +96,7 @@ uv run python scripts/evaluate_sales_forecast.py
 uv run python scripts/index_knowledge.py
 uv run python scripts/eval_rag_recall.py
 uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py tests/pipelines/test_rag.py
+uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py
 # Optional Prefect Cloud (after PREFECT_API_KEY in services/api/.env):
 # PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"
 # uv run prefect config view
