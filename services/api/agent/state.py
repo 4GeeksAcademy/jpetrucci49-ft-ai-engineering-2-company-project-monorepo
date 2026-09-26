@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from operator import add
+from typing import Annotated, TypedDict
 
 
 class DeskAgentState(TypedDict):
@@ -11,3 +12,7 @@ class DeskAgentState(TypedDict):
     context: list[dict]
     answer: str
     error: str
+    intent: str
+    incident_query: dict
+    incident_result: dict
+    path: Annotated[list[str], add]

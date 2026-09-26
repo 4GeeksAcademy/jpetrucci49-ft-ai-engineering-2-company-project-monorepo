@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk agent graph (7.6)_
+_Last updated: Desk agent incident tool (7.7)_
 
 ## Completed
 
@@ -254,6 +254,16 @@ _Last updated: Desk agent graph (7.6)_
 - [x] Traces: `data/eval/agent_traces/{run_id}.json`; `POST /agent/query` + `GET /agent/traces/{run_id}`
 - [x] `POST /knowledge/query` unchanged
 - [x] Tests: `tests/pipelines/test_agent_graph.py` (path + Medicare grounding); `test_rag.py` still required
+
+### Desk agent incident tool (7.7)
+
+- [x] Spec: `specs/07.7_LANGGRAPH_TOOL_SPECS.md`
+- [x] Read-only in-process lookup via `get_incident` / `list_incidents` (5s timeout)
+- [x] `classify` routes `rag` / `incident` / `both` from the question; no user-selected source
+- [x] Fallback: `I couldn't confirm that ticket's status right now`
+- [x] Traces include `path`, `sources_used`, `incident_ids`, `incident_error`
+- [x] Routing evals in `tests/pipelines/test_agent_graph.py`; `test_rag.py` still required
+- [x] Incident HTTP stays JWT-protected; the tool takes no token
 
 ## In progress
 

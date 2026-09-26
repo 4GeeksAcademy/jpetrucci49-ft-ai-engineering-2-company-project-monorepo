@@ -43,6 +43,8 @@ data/eval/agent_traces/*
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000002.json
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000003.json
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000004.json
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000005.json
+!data/eval/agent_traces/00000000-0000-4000-8000-000000000006.json
 
 # Pipeline local artifacts (keep committed samples)
 data/raw/reporting.db
