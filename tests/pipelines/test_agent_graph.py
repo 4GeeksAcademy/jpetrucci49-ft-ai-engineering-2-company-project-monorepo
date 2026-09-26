@@ -3,20 +3,25 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 from agent.graph import GRAPH_NODES, desk_graph, run_desk_agent
+from agent.classify import classify_turn
 from agent.nodes import (
     EMPTY_QUESTION,
     route_after_classify,
     route_after_intake,
+    route_after_inventory,
     route_after_lookup,
     route_after_retrieve,
 )
 from agent.tools.incidents import TICKET_FALLBACK, classify_question
+from agent.tools.inventory import STOCK_FALLBACK
 from agent.traces import infer_path, load_trace, traces_dir
+from inventory.schemas import MedicalSupplyResponse
 from app.incidents.models import (
     IncidentBranch,
     IncidentCategory,
@@ -33,11 +38,25 @@ WEATHER_ID = "00000000-0000-4000-8000-000000000003"
 MEDICARE_ID = "00000000-0000-4000-8000-000000000004"
 TICKET_ID = "00000000-0000-4000-8000-000000000005"
 FALLBACK_ID = "00000000-0000-4000-8000-000000000006"
+GLOVES_ID = "00000000-0000-4000-8000-000000000007"
+STOCK_FALLBACK_ID = "00000000-0000-4000-8000-000000000008"
 
 
 def _load_fixture(run_id: str) -> dict:
     path = TRACES / f"{run_id}.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _sample_supply() -> MedicalSupplyResponse:
+    return MedicalSupplyResponse(
+        id=1,
+        name="Nitrile gloves (box of 100)",
+        sku="HCR-PPE-001",
+        category="ppe",
+        unit="box",
+        country="US",
+        current_stock=40,
+    )
 
 
 def _sample_incident(incident_id: int = 12) -> IncidentPublic:
@@ -88,6 +107,23 @@ def test_tool_module_is_read_only() -> None:
     assert "from app.incidents.manager import list_incidents as _list_incidents" in text
 
 
+def test_inventory_tool_module_is_read_only() -> None:
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "services"
+        / "api"
+        / "agent"
+        / "tools"
+        / "inventory.py"
+    )
+    text = source.read_text(encoding="utf-8")
+    assert "create_supply" not in text
+    assert "register_delivery" not in text
+    assert "register_consumption" not in text
+    assert "from inventory.service import list_supplies as _list_supplies" in text
+    assert "from inventory.service import get_supply as _get_supply" in text
+
+
 def test_classify_routes_ticket_vs_policy() -> None:
     intent, query = classify_question("What is the status of ticket 12?")
     assert intent == "incident"
@@ -101,12 +137,35 @@ def test_classify_routes_ticket_vs_policy() -> None:
     assert intent == "both"
 
 
+def test_classify_turn_routes_stock() -> None:
+    intent, _, inventory_query = classify_turn("Do we have stock of nitrile gloves?")
+    assert intent == "inventory"
+    assert inventory_query.name_query and "nitrile" in inventory_query.name_query.lower()
+    intent, _, _ = classify_turn(
+        "What is the cancellation policy and do we have stock of nitrile gloves?"
+    )
+    assert intent == "inventory_rag"
+    intent, _, _ = classify_turn("What is the status of ticket 12 and nitrile gloves?")
+    assert intent == "incident"
+
+
 def test_route_predicates() -> None:
     assert route_after_intake({"question": "", "error": EMPTY_QUESTION}) == "reject"
     assert route_after_intake({"question": "  cancel  "}) == "classify"
     assert route_after_classify({"intent": "incident"}) == "lookup_incident"
     assert route_after_classify({"intent": "both"}) == "lookup_incident"
     assert route_after_classify({"intent": "rag"}) == "retrieve_policy"
+    assert route_after_classify({"intent": "inventory"}) == "lookup_inventory"
+    assert route_after_classify({"intent": "inventory_rag"}) == "lookup_inventory"
+    assert route_after_inventory(
+        {"intent": "inventory", "inventory_result": {"ok": True}}
+    ) == "answer_inventory"
+    assert route_after_inventory(
+        {"intent": "inventory", "inventory_result": {"ok": False}}
+    ) == "refuse_inventory"
+    assert route_after_inventory(
+        {"intent": "inventory_rag", "inventory_result": {"ok": False}}
+    ) == "retrieve_policy"
     assert route_after_lookup({"intent": "both", "incident_result": {"ok": False}}) == (
         "retrieve_policy"
     )
@@ -198,7 +257,31 @@ def test_eval_route_rag_not_tool() -> None:
     trace = _load_fixture(CANCEL_ID)
     assert "retrieve_policy" in trace["path"]
     assert "lookup_incident" not in trace["path"]
+    assert "lookup_inventory" not in trace["path"]
     assert trace["sources_used"] == ["rag"]
+
+
+def test_eval_route_inventory_not_rag() -> None:
+    trace = _load_fixture(GLOVES_ID)
+    assert "lookup_inventory" in trace["path"]
+    assert "retrieve_policy" not in trace["path"]
+    assert trace["sources_used"] == ["inventory"]
+    assert re.search(r"\d+", trace["answer"])
+    assert "cancel" not in trace["answer"].lower()
+
+
+def test_eval_route_rag_not_inventory() -> None:
+    trace = _load_fixture(CANCEL_ID)
+    assert "lookup_inventory" not in trace["path"]
+    assert "inventory" not in trace["sources_used"]
+
+
+def test_eval_route_inventory_fallback() -> None:
+    trace = _load_fixture(STOCK_FALLBACK_ID)
+    assert "lookup_inventory" in trace["path"]
+    assert trace["inventory_error"] in {"timeout", "unavailable", "not_found"}
+    assert "couldn't confirm that supply's stock right now" in trace["answer"].lower()
+    assert not re.search(r"\b\d+\b", trace["answer"])
 
 
 def test_eval_route_tool_fallback() -> None:
@@ -283,4 +366,43 @@ def test_mocked_ticket_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) ->
     assert saved is not None
     assert saved["incident_error"] == "timeout"
     assert "open" not in saved["answer"].lower()
+    (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
+
+
+def test_mocked_stock_skips_retrieve(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "agent.tools.inventory.list_supplies",
+        lambda: [_sample_supply()],
+    )
+
+    def _fail_retrieve(*_a, **_k):
+        raise AssertionError("retrieve must not run for a stock-only question")
+
+    monkeypatch.setattr("agent.nodes.retrieve", _fail_retrieve)
+    run_id = "66666666-6666-4666-8666-666666666666"
+    result = run_desk_agent("Do we have stock of nitrile gloves?", run_id=run_id)
+    assert result["intent"] == "inventory"
+    assert "40" in result["answer"]
+    assert "HCR-PPE-001" in result["answer"]
+    saved = load_trace(run_id)
+    assert saved is not None
+    assert "lookup_inventory" in saved["path"]
+    assert "retrieve_policy" not in saved["path"]
+    assert saved["sources_used"] == ["inventory"]
+    assert saved["supply_skus"] == ["HCR-PPE-001"]
+    (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
+
+
+def test_mocked_stock_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _timeout(*_a, **_k):
+        raise TimeoutError("inventory lookup timed out")
+
+    monkeypatch.setattr("agent.tools.inventory._call", _timeout)
+    run_id = "77777777-7777-4777-8777-777777777777"
+    result = run_desk_agent("Do we have stock of nitrile gloves?", run_id=run_id)
+    assert result["answer"] == STOCK_FALLBACK
+    saved = load_trace(run_id)
+    assert saved is not None
+    assert saved["inventory_error"] == "timeout"
+    assert "40" not in saved["answer"]
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)

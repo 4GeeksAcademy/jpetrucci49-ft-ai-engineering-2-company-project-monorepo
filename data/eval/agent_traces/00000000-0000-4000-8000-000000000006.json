@@ -7,6 +7,8 @@
   "context_sources": [],
   "incident_ids": [],
   "incident_error": "timeout",
+  "supply_skus": [],
+  "inventory_error": null,
   "answer": "I couldn't confirm that ticket's status right now",
   "error": null
 }

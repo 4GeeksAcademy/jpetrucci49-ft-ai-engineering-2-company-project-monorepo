@@ -10,16 +10,20 @@ from langgraph.graph import END, START, StateGraph
 
 from agent.nodes import (
     answer_incident,
+    answer_inventory,
     classify,
     generate_policy,
     intake,
     lookup_incident,
+    lookup_inventory,
     refuse,
     refuse_incident,
+    refuse_inventory,
     reject,
     retrieve_policy,
     route_after_classify,
     route_after_intake,
+    route_after_inventory,
     route_after_lookup,
     route_after_retrieve,
 )
@@ -33,6 +37,9 @@ GRAPH_NODES = frozenset(
         "lookup_incident",
         "answer_incident",
         "refuse_incident",
+        "lookup_inventory",
+        "answer_inventory",
+        "refuse_inventory",
         "retrieve_policy",
         "generate_policy",
         "refuse",
@@ -48,6 +55,9 @@ def build_desk_graph() -> StateGraph:
     builder.add_node("lookup_incident", lookup_incident)
     builder.add_node("answer_incident", answer_incident)
     builder.add_node("refuse_incident", refuse_incident)
+    builder.add_node("lookup_inventory", lookup_inventory)
+    builder.add_node("answer_inventory", answer_inventory)
+    builder.add_node("refuse_inventory", refuse_inventory)
     builder.add_node("retrieve_policy", retrieve_policy)
     builder.add_node("generate_policy", generate_policy)
     builder.add_node("refuse", refuse)
@@ -61,7 +71,20 @@ def build_desk_graph() -> StateGraph:
     builder.add_conditional_edges(
         "classify",
         route_after_classify,
-        {"lookup_incident": "lookup_incident", "retrieve_policy": "retrieve_policy"},
+        {
+            "lookup_incident": "lookup_incident",
+            "lookup_inventory": "lookup_inventory",
+            "retrieve_policy": "retrieve_policy",
+        },
+    )
+    builder.add_conditional_edges(
+        "lookup_inventory",
+        route_after_inventory,
+        {
+            "answer_inventory": "answer_inventory",
+            "refuse_inventory": "refuse_inventory",
+            "retrieve_policy": "retrieve_policy",
+        },
     )
     builder.add_conditional_edges(
         "lookup_incident",
@@ -79,6 +102,8 @@ def build_desk_graph() -> StateGraph:
     )
     builder.add_edge("answer_incident", END)
     builder.add_edge("refuse_incident", END)
+    builder.add_edge("answer_inventory", END)
+    builder.add_edge("refuse_inventory", END)
     builder.add_edge("refuse", END)
     builder.add_edge("reject", END)
     builder.add_edge("generate_policy", END)
@@ -99,6 +124,8 @@ def _empty_state(run_id: str, question: str) -> dict[str, Any]:
         "intent": "",
         "incident_query": {},
         "incident_result": {},
+        "inventory_query": {},
+        "inventory_result": {},
         "path": [],
     }
 

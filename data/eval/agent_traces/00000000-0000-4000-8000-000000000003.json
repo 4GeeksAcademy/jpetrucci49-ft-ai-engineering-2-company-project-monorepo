@@ -7,6 +7,8 @@
   "context_sources": [],
   "incident_ids": [],
   "incident_error": null,
+  "supply_skus": [],
+  "inventory_error": null,
   "answer": "I don't have enough information in the HealthCore knowledge base to answer that reliably. Please check with billing (Tom Callahan) or clinical operations rather than guessing coverage, fees, or timeframes.",
   "error": null
 }

@@ -7,6 +7,8 @@
   "context_sources": ["appointment-policy"],
   "incident_ids": [],
   "incident_error": null,
+  "supply_skus": [],
+  "inventory_error": null,
   "answer": "For private-pay patients, cancelling less than 24 hours in advance is 50 USD in the United States or 40 GBP in the United Kingdom.",
   "error": null
 }

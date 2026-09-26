@@ -36,6 +36,8 @@ def sources_used(path: list[str]) -> list[str]:
     used: list[str] = []
     if "lookup_incident" in path:
         used.append("incident")
+    if "lookup_inventory" in path:
+        used.append("inventory")
     if "retrieve_policy" in path:
         used.append("rag")
     return used
@@ -62,6 +64,13 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
     incident_ids = [
         row["id"] for row in incidents if isinstance(row, dict) and "id" in row
     ]
+    inventory = state.get("inventory_result") or {}
+    supplies = inventory.get("supplies") or []
+    supply_skus = [
+        str(row["sku"])
+        for row in supplies
+        if isinstance(row, dict) and row.get("sku")
+    ]
     return {
         "run_id": state.get("run_id", ""),
         "path": path,
@@ -75,6 +84,8 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
         ],
         "incident_ids": incident_ids,
         "incident_error": result.get("error"),
+        "supply_skus": supply_skus,
+        "inventory_error": inventory.get("error"),
         "answer": state.get("answer", ""),
         "error": error or None,
     }

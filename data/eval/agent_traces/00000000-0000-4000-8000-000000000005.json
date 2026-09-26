@@ -7,6 +7,8 @@
   "context_sources": [],
   "incident_ids": [12],
   "incident_error": null,
+  "supply_skus": [],
+  "inventory_error": null,
   "answer": "Ticket 12 is Open. Title: Waiting-room kiosk offline. Category: IT system. Origin: Internal. Clinic: Austin — North. Opened: 2026-01-15T10:00:00+00:00. Updated: 2026-01-15T10:00:00+00:00.",
   "error": null
 }

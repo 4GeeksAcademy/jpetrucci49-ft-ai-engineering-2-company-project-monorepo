@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk agent incident tool (7.7)_
+_Last updated: Desk agent inventory stretch (7.7)_
 
 ## Completed
 
@@ -264,6 +264,15 @@ _Last updated: Desk agent incident tool (7.7)_
 - [x] Traces include `path`, `sources_used`, `incident_ids`, `incident_error`
 - [x] Routing evals in `tests/pipelines/test_agent_graph.py`; `test_rag.py` still required
 - [x] Incident HTTP stays JWT-protected; the tool takes no token
+
+### Desk agent inventory lookup (7.7 stretch)
+
+- [x] Spec: `specs/07.7_TOOL_STRETCH_SPECS.md`
+- [x] Separate read-only tool via `list_supplies` / `get_supply` (5s timeout)
+- [x] `classify` adds `inventory` / `inventory_rag`; ticket path unchanged
+- [x] Fallback: `I couldn't confirm that supply's stock right now`
+- [x] Traces include `supply_skus` / `inventory_error`
+- [x] `GET /inventory/products` stays JWT-protected; the tool takes no token
 
 ## In progress
 

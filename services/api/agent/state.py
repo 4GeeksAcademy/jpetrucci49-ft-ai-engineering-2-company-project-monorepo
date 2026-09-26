@@ -15,4 +15,6 @@ class DeskAgentState(TypedDict):
     intent: str
     incident_query: dict
     incident_result: dict
+    inventory_query: dict
+    inventory_result: dict
     path: Annotated[list[str], add]

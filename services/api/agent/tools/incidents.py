@@ -127,10 +127,14 @@ def parse_incident_lookup(question: str) -> IncidentLookupIn:
     return IncidentLookupIn(incident_id=incident_id, status=status)
 
 
+def is_policy_question(question: str) -> bool:
+    return bool(_POLICY_WORDS.search(question))
+
+
 def classify_question(question: str) -> tuple[str, IncidentLookupIn]:
     lookup = parse_incident_lookup(question)
     asks_incident = lookup.incident_id is not None or bool(_INCIDENT_WORDS.search(question))
-    asks_policy = bool(_POLICY_WORDS.search(question))
+    asks_policy = is_policy_question(question)
     if asks_incident and asks_policy:
         return "both", lookup
     if asks_incident:
