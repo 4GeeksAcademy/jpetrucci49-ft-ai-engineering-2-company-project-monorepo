@@ -19,6 +19,9 @@ dependencies = [
     "tinydb>=4.8.2",
     "uvicorn[standard]>=0.34.0",
     "langgraph>=1.2.12",
+    "mcpauth>=0.2.0b1",
+    "mcp>=1.30.0",
+    "langchain-mcp-adapters>=0.3.2",
 ]
 
 [project.scripts]

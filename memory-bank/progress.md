@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk agent inventory stretch (7.7)_
+_Last updated: HealthCore MCP server + desk-agent client (7.8)_
 
 ## Completed
 
@@ -273,6 +273,15 @@ _Last updated: Desk agent inventory stretch (7.7)_
 - [x] Fallback: `I couldn't confirm that supply's stock right now`
 - [x] Traces include `supply_skus` / `inventory_error`
 - [x] `GET /inventory/products` stays JWT-protected; the tool takes no token
+
+### HealthCore MCP server (7.8)
+
+- [x] Spec: `specs/07.8_MCP_SERVER_SPECS.md`
+- [x] Streamable HTTP server `mcps/healthcore/` on port 8100 (`mcpauth` resource-server + PRM)
+- [x] Incident tools call the existing manager; `incidents_update_status` uses `update_incident_status` only
+- [x] `inventory_query` reads; `inventory_mutate` always errors `inventory_read_only`
+- [x] Desk agent `lookup_incident` / `lookup_inventory` go through `langchain-mcp-adapters` (no manager import in `agent/`)
+- [x] Tests: `tests/pipelines/test_agent_graph.py` (routing + `agent_incidents_via_mcp` + `mcp_inventory_mutate_rejected`); `test_rag.py` still required
 
 ## In progress
 

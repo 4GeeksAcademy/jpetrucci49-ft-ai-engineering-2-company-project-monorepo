@@ -1,4 +1,4 @@
-"""Read-only inventory lookup. Calls the existing service — no fake catalogue."""
+"""Read-only inventory lookup. Calls MCP inventory_query — not the service."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from inventory.schemas import MedicalSupplyResponse
+from agent.mcp_client import McpClientError, call_inventory_query
 
 logger = logging.getLogger(__name__)
 
@@ -114,46 +114,35 @@ def parse_inventory_lookup(question: str) -> InventoryLookupIn:
     return InventoryLookupIn(supply_id=None, sku=sku, name_query=name_query)
 
 
-def list_supplies() -> list[MedicalSupplyResponse]:
-    from inventory.database import get_session_factory
-    from inventory.service import list_supplies as _list_supplies
-
-    session = get_session_factory()()
-    try:
-        return _list_supplies(session)
-    finally:
-        session.close()
-
-
-def get_supply(supply_id: int) -> MedicalSupplyResponse:
-    from inventory.database import get_session_factory
-    from inventory.service import get_supply as _get_supply
-
-    session = get_session_factory()()
-    try:
-        return _get_supply(session, supply_id)
-    finally:
-        session.close()
-
-
 def lookup_inventory(query: InventoryLookupIn) -> InventoryLookupOut:
     timeout = lookup_timeout_seconds()
+    if query.supply_id is None and not query.sku and not query.name_query:
+        return InventoryLookupOut(ok=False, supplies=[], error="not_found")
     try:
-        if query.supply_id is not None:
-            row = _call(lambda: get_supply(query.supply_id), timeout)
-            return InventoryLookupOut(ok=True, supplies=[_to_record(row)], error=None)
-        if not query.sku and not query.name_query:
+        payload = _call(
+            lambda: call_inventory_query(
+                supply_id=query.supply_id,
+                sku=query.sku,
+                name_query=query.name_query,
+            ),
+            timeout,
+        )
+        if isinstance(payload, dict) and payload.get("error"):
+            return InventoryLookupOut(
+                ok=False,
+                supplies=[],
+                error=_map_error(payload["error"]),
+            )
+        rows = payload.get("supplies") if isinstance(payload, dict) else payload
+        records = [_to_record(row) for row in (rows or [])[:LIST_CAP]]
+        if not records:
             return InventoryLookupOut(ok=False, supplies=[], error="not_found")
-        rows = _call(list_supplies, timeout)
-        matched = _filter_rows(rows or [], query)
-        if not matched:
-            return InventoryLookupOut(ok=False, supplies=[], error="not_found")
-        return InventoryLookupOut(ok=True, supplies=matched, error=None)
+        return InventoryLookupOut(ok=True, supplies=records, error=None)
     except TimeoutError:
         return InventoryLookupOut(ok=False, supplies=[], error="timeout")
-    except Exception as exc:
-        if _is_not_found(exc):
-            return InventoryLookupOut(ok=False, supplies=[], error="not_found")
+    except McpClientError as exc:
+        return InventoryLookupOut(ok=False, supplies=[], error=_map_error(exc.code))
+    except Exception:
         logger.exception("inventory lookup unavailable")
         return InventoryLookupOut(ok=False, supplies=[], error="unavailable")
 
@@ -180,29 +169,20 @@ def _format_one(row: SupplyRecord) -> str:
     )
 
 
-def _filter_rows(
-    rows: list[MedicalSupplyResponse], query: InventoryLookupIn
-) -> list[SupplyRecord]:
-    if query.sku:
-        sku = query.sku.casefold()
-        exact = [row for row in rows if row.sku.casefold() == sku]
-        if exact:
-            return [_to_record(row) for row in exact[:LIST_CAP]]
-    if query.name_query:
-        needle = query.name_query.casefold()
-        named = [row for row in rows if needle in row.name.casefold()]
-        return [_to_record(row) for row in named[:LIST_CAP]]
-    return []
+def _to_record(row: dict | SupplyRecord) -> SupplyRecord:
+    if isinstance(row, SupplyRecord):
+        return row
+    if hasattr(row, "model_dump"):
+        return SupplyRecord.model_validate(row.model_dump())
+    return SupplyRecord.model_validate(row)
 
 
-def _to_record(row: MedicalSupplyResponse) -> SupplyRecord:
-    return SupplyRecord.model_validate(row.model_dump())
-
-
-def _is_not_found(exc: Exception) -> bool:
-    from inventory.exceptions import SupplyNotFoundError
-
-    return isinstance(exc, SupplyNotFoundError)
+def _map_error(code: str) -> InventoryError:
+    if code in {"inventory_not_found", "not_found"}:
+        return "not_found"
+    if code == "timeout":
+        return "timeout"
+    return "unavailable"
 
 
 def _call(fn, timeout: float):

@@ -1,4 +1,4 @@
-"""Read-only incident lookup. Calls the existing manager — no fake store."""
+"""Read-only incident lookup. Calls MCP incidents_get — not the manager."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from agent.mcp_client import McpClientError, call_incidents_get
 from app.incidents.models import (
     IncidentBranch,
     IncidentCategory,
     IncidentOrigin,
-    IncidentPublic,
     IncidentStatus,
 )
 
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 INCIDENT_LOOKUP_TIMEOUT_SECONDS = 5
 TICKET_FALLBACK = "I couldn't confirm that ticket's status right now"
-LIST_CAP = 5
 
 IncidentError = Literal["not_found", "timeout", "unavailable"]
 
@@ -142,54 +141,23 @@ def classify_question(question: str) -> tuple[str, IncidentLookupIn]:
     return "rag", lookup
 
 
-def get_incident(incident_id: int) -> IncidentPublic | None:
-    from app.incidents.manager import get_incident as _get_incident
-
-    return _get_incident(incident_id)
-
-
-def list_incidents(
-    *,
-    status: IncidentStatus | None = None,
-    origin: IncidentOrigin | None = None,
-    branch: IncidentBranch | None = None,
-    category: IncidentCategory | None = None,
-) -> list[IncidentPublic]:
-    from app.incidents.manager import list_incidents as _list_incidents
-
-    return _list_incidents(
-        status=status,
-        origin=origin,
-        branch=branch,
-        category=category,
-    )
-
-
 def lookup_incidents(query: IncidentLookupIn) -> IncidentLookupOut:
     timeout = lookup_timeout_seconds()
+    if query.incident_id is None:
+        return IncidentLookupOut(ok=False, incidents=[], error="not_found")
     try:
-        if query.incident_id is not None:
-            incident = _call(lambda: get_incident(query.incident_id), timeout)
-            if incident is None:
-                return IncidentLookupOut(ok=False, incidents=[], error="not_found")
-            return IncidentLookupOut(ok=True, incidents=[_to_record(incident)], error=None)
-        if not any((query.status, query.category, query.origin, query.branch)):
-            return IncidentLookupOut(ok=False, incidents=[], error="not_found")
-        rows = _call(
-            lambda: list_incidents(
-                status=query.status,
-                origin=query.origin,
-                branch=query.branch,
-                category=query.category,
-            ),
-            timeout,
-        )
-        records = [_to_record(row) for row in (rows or [])[:LIST_CAP]]
-        if not records:
-            return IncidentLookupOut(ok=False, incidents=[], error="not_found")
-        return IncidentLookupOut(ok=True, incidents=records, error=None)
+        payload = _call(lambda: call_incidents_get(query.incident_id), timeout)
+        if isinstance(payload, dict) and payload.get("error"):
+            return IncidentLookupOut(
+                ok=False,
+                incidents=[],
+                error=_map_error(payload["error"]),
+            )
+        return IncidentLookupOut(ok=True, incidents=[_to_record(payload)], error=None)
     except TimeoutError:
         return IncidentLookupOut(ok=False, incidents=[], error="timeout")
+    except McpClientError as exc:
+        return IncidentLookupOut(ok=False, incidents=[], error=_map_error(exc.code))
     except Exception:
         logger.exception("incident lookup unavailable")
         return IncidentLookupOut(ok=False, incidents=[], error="unavailable")
@@ -227,9 +195,18 @@ def _format_one(row: IncidentRecord) -> str:
     )
 
 
-def _to_record(incident: IncidentPublic) -> IncidentRecord:
-    payload = incident.model_dump(mode="json")
-    return IncidentRecord.model_validate(payload)
+def _to_record(incident: dict | IncidentRecord) -> IncidentRecord:
+    if isinstance(incident, IncidentRecord):
+        return incident
+    return IncidentRecord.model_validate(incident)
+
+
+def _map_error(code: str) -> IncidentError:
+    if code in {"incident_not_found", "not_found"}:
+        return "not_found"
+    if code == "timeout":
+        return "timeout"
+    return "unavailable"
 
 
 def _parse_status(text: str) -> IncidentStatus | None:
