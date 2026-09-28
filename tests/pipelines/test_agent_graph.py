@@ -73,6 +73,16 @@ def _sample_incident(incident_id: int = 12) -> IncidentPublic:
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_agent_memory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_MEMORY_DB_PATH", str(tmp_path / "agent_memory.json"))
+    from agent.memory.store import reset_memory
+
+    reset_memory()
+    yield
+    reset_memory()
+
+
 def test_desk_graph_is_compiled_with_required_nodes() -> None:
     assert hasattr(desk_graph, "invoke")
     assert hasattr(desk_graph, "ainvoke")
@@ -152,6 +162,9 @@ def test_classify_turn_routes_stock() -> None:
 def test_route_predicates() -> None:
     assert route_after_intake({"question": "", "error": EMPTY_QUESTION}) == "reject"
     assert route_after_intake({"question": "  cancel  "}) == "classify"
+    assert route_after_intake({"question": "yes", "memory_had_pending": True}) == (
+        "resolve_memory"
+    )
     assert route_after_classify({"intent": "incident"}) == "lookup_incident"
     assert route_after_classify({"intent": "both"}) == "lookup_incident"
     assert route_after_classify({"intent": "rag"}) == "retrieve_policy"
@@ -207,6 +220,7 @@ def test_checkpoint_matches_invoke(monkeypatch: pytest.MonkeyPatch) -> None:
         "classify",
         "retrieve_policy",
         "generate_policy",
+        "propose_memory",
     ]
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
 
@@ -325,7 +339,8 @@ def test_mocked_empty_retrieve_refuses_without_generate(monkeypatch: pytest.Monk
     assert result["answer"] == NO_INFORMATION
     saved = load_trace(run_id)
     assert saved is not None
-    assert saved["path"][-1] == "refuse"
+    assert saved["path"][-1] == "propose_memory"
+    assert "refuse" in saved["path"]
     assert saved["sources_used"] == ["rag"]
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
 
