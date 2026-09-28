@@ -13,6 +13,7 @@
 ├── src/                  # M2 TypeScript utilities and types
 ├── scripts/              # Python helper scripts (M5 incident analysis)
 ├── services/api/         # FastAPI internal API (M5 incidents, M6 suppliers, M7 auth)
+├── mcps/                 # MCP servers (7.8 HealthCore incidents + inventory)
 ├── data/                 # Pipelines (orchestration), process (transforms), raw, eval
 ├── pyproject.toml        # Python dependencies (uv)
 ├── uv.lock               # Locked Python dependency versions
@@ -56,8 +57,9 @@
 19. **Sales forecast evaluation (7.3)** — `scripts/evaluate_sales_forecast.py` runs prefix-safe `TimeSeriesSplit` (5 folds) and a learning curve on **2016–2023 only**. Logic in `data/process/sales_forecast_eval.py`. Artifacts: `data/eval/sales_forecast_cv_metrics.json`, `sales_forecast_learning_curve.png`, `evaluation_report.md`. Tests: `tests/pipelines/test_sales_forecast_cv.py`.
 20. **Desk knowledge RAG (7.5)** — Four CONTEXT policy files in `docs/company-knowledge-base/`. `setup()`/`embed()` in `data/process/rag.py`; `retrieve()`/`generate_answer()`/`query()` in `data/pipelines/rag.py`. Course secrets: `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`. Qdrant collection `healthcore_knowledge` (Compose service `qdrant`, port 6333). `POST /knowledge/query` returns `{ answer }` only. Backoffice `/knowledge`. Tests: `tests/pipelines/test_rag.py`. Recall@3: `scripts/eval_rag_recall.py`.
 21. **Desk agent graph (7.6)** — LangGraph control plane over 7.5 retrieve/generate. Compiled at import in `services/api/agent/graph.py` (`desk_graph` + `MemorySaver`). State keys: `run_id`, `question`, `context`, `answer`, `error` plus 7.7 routing fields. HTTP: JWT `POST /agent/query` → `{ answer, run_id }`; `GET /agent/traces/{run_id}`. `/knowledge/query` still calls `query()`. Tests: `tests/pipelines/test_agent_graph.py`.
-22. **Desk agent incident tool (7.7)** — `classify` sets `intent` (`rag` | `incident` | `both`) from the question. `lookup_incident` calls `app.incidents.manager.get_incident` / `list_incidents` in-process (5s timeout, `INCIDENT_LOOKUP_TIMEOUT_SECONDS`). No HTTP self-call, no write APIs, no tool JWT. Fallback copy is fixed. Traces record `sources_used` and `incident_ids`.
-23. **Desk agent inventory stretch (7.7)** — Separate tool in `agent/tools/inventory.py`. `lookup_inventory` calls `inventory.service.list_supplies` / `get_supply` (5s, `INVENTORY_LOOKUP_TIMEOUT_SECONDS`). Intents `inventory` / `inventory_rag`. Ticket questions stay on the incident path. Traces add `supply_skus` / `inventory_error`.
+22. **Desk agent incident tool (7.7)** — `classify` sets `intent` (`rag` | `incident` | `both`) from the question. Fallback copy is fixed. Traces record `sources_used` and `incident_ids`.
+23. **Desk agent inventory stretch (7.7)** — Separate tool in `agent/tools/inventory.py`. Intents `inventory` / `inventory_rag`. Ticket questions stay on the incident path. Traces add `supply_skus` / `inventory_error`.
+24. **HealthCore MCP server (7.8)** — Independent Streamable HTTP server at `mcps/healthcore/` (`uvicorn` `:8100`). Auth is `mcpauth` resource-server mode (RFC 9728 PRM + bearer JWT). FastMCP is not given `auth=` / `token_verifier`. Incident tools call `app.incidents.manager`; inventory is query-only (`inventory_mutate` always `inventory_read_only`). The desk graph calls tools through `langchain-mcp-adapters` `MultiServerMCPClient` (`MCP_SERVER_URL` + client-credentials token). `JWT_SECRET` is not an MCP token.
 
 ## Technical constraints
 
@@ -99,6 +101,9 @@ uv run python scripts/index_knowledge.py
 uv run python scripts/eval_rag_recall.py
 uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py tests/pipelines/test_rag.py
 uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py
+# HealthCore MCP server (7.8) — after MCP_AUTH_ISSUER + MCP_RESOURCE are set
+npm run dev:mcp
+# PYTHONPATH=".:services/api" uv run --env-file .env uvicorn mcps.healthcore.server:app --host 0.0.0.0 --port 8100
 # Optional Prefect Cloud (after PREFECT_API_KEY in services/api/.env):
 # PREFECT_HOME="$(pwd)/.prefect" uv run prefect cloud login --key "$PREFECT_API_KEY"
 # uv run prefect config view

@@ -103,8 +103,8 @@ def test_tool_module_is_read_only() -> None:
     text = source.read_text(encoding="utf-8")
     assert "create_incident" not in text
     assert "update_incident_status" not in text
-    assert "from app.incidents.manager import get_incident as _get_incident" in text
-    assert "from app.incidents.manager import list_incidents as _list_incidents" in text
+    assert "from app.incidents.manager" not in text
+    assert "call_incidents_get" in text
 
 
 def test_inventory_tool_module_is_read_only() -> None:
@@ -120,8 +120,8 @@ def test_inventory_tool_module_is_read_only() -> None:
     assert "create_supply" not in text
     assert "register_delivery" not in text
     assert "register_consumption" not in text
-    assert "from inventory.service import list_supplies as _list_supplies" in text
-    assert "from inventory.service import get_supply as _get_supply" in text
+    assert "from inventory.service" not in text
+    assert "call_inventory_query" in text
 
 
 def test_classify_routes_ticket_vs_policy() -> None:
@@ -332,8 +332,8 @@ def test_mocked_empty_retrieve_refuses_without_generate(monkeypatch: pytest.Monk
 
 def test_mocked_ticket_skips_retrieve(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "agent.tools.incidents.get_incident",
-        lambda incident_id: _sample_incident(incident_id),
+        "agent.tools.incidents.call_incidents_get",
+        lambda incident_id: _sample_incident(incident_id).model_dump(mode="json"),
     )
 
     def _fail_retrieve(*_a, **_k):
@@ -371,8 +371,8 @@ def test_mocked_ticket_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_mocked_stock_skips_retrieve(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "agent.tools.inventory.list_supplies",
-        lambda: [_sample_supply()],
+        "agent.tools.inventory.call_inventory_query",
+        lambda **_k: {"ok": True, "supplies": [_sample_supply().model_dump(mode="json")]},
     )
 
     def _fail_retrieve(*_a, **_k):
@@ -406,3 +406,75 @@ def test_mocked_stock_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) -> 
     assert saved["inventory_error"] == "timeout"
     assert "40" not in saved["answer"]
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
+
+
+def test_agent_incidents_via_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    root = Path(__file__).resolve().parents[2]
+    nodes = (root / "services" / "api" / "agent" / "nodes.py").read_text(encoding="utf-8")
+    tools = (
+        root / "services" / "api" / "agent" / "tools" / "incidents.py"
+    ).read_text(encoding="utf-8")
+    assert "from app.incidents.manager" not in nodes
+    assert "from app.incidents.manager" not in tools
+    monkeypatch.setattr(
+        "agent.tools.incidents.call_incidents_get",
+        lambda incident_id: _sample_incident(incident_id).model_dump(mode="json"),
+    )
+    run_id = "88888888-8888-4888-8888-888888888888"
+    result = run_desk_agent("What is the status of ticket 12?", run_id=run_id)
+    assert "lookup_incident" in infer_path(result)
+    assert "Ticket 12" in result["answer"]
+    (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
+
+
+def test_mcp_inventory_mutate_rejected() -> None:
+    from mcps.healthcore.tools.inventory import inventory_mutate
+
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "mcps"
+        / "healthcore"
+        / "tools"
+        / "inventory.py"
+    )
+    text = source.read_text(encoding="utf-8")
+    assert "create_supply" not in text
+    assert "register_delivery" not in text
+    assert "register_consumption" not in text
+    result = inventory_mutate(supply_id=1, sku="HCR-PPE-001", quantity=5, action="consume")
+    assert result["ok"] is False
+    assert result["error"] == "inventory_read_only"
+
+
+def _fake_auth_server():
+    from mcpauth.config import AuthServerConfig, AuthServerType, AuthorizationServerMetadata
+
+    return AuthServerConfig(
+        type=AuthServerType.OIDC,
+        metadata=AuthorizationServerMetadata(
+            issuer="https://auth.example.test/oidc",
+            authorization_endpoint="https://auth.example.test/oidc/auth",
+            token_endpoint="https://auth.example.test/oidc/token",
+            jwks_uri="https://auth.example.test/oidc/jwks",
+            response_types_supported=["code"],
+            code_challenge_methods_supported=["S256"],
+        ),
+    )
+
+
+def test_mcp_http_rejects_missing_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MCP_RESOURCE", "https://example.test/mcp")
+    monkeypatch.setenv("MCP_AUTH_ISSUER", "https://auth.example.test/oidc")
+    from starlette.testclient import TestClient
+
+    from mcps.healthcore.server import create_app
+
+    app = create_app(_fake_auth_server())
+    with TestClient(app) as client:
+        prm = client.get("/.well-known/oauth-protected-resource/mcp")
+        denied = client.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+    assert prm.status_code == 200
+    assert "incidents:read" in prm.json()["scopes_supported"]
+    assert "inventory:write" not in (prm.json().get("scopes_supported") or [])
+    assert denied.status_code == 401
+    assert "WWW-Authenticate" in denied.headers
