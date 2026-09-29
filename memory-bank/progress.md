@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk-agent memory (8.5)_
+_Last updated: Desk-agent harness and guardrails (8.6)_
 
 ## Completed
 
@@ -291,6 +291,14 @@ _Last updated: Desk-agent memory (8.5)_
 - [x] PHI scan (HIPAA + UK GDPR) before show and before consolidate; Patient Johnson style is a visible refusal
 - [x] Classifier `approve` | `reject` | `edit` | `unclear`; unclear/expired never write `items`
 - [x] Tests: `tests/pipelines/test_agent_memory.py`; evidence: `data/eval/memory_cycles.md`; `test_agent_graph.py` + `test_rag.py` still required
+
+### Desk-agent harness (8.6)
+
+- [x] Spec: `specs/08.6_GUARDRAILS_SPECS.md`; context: `context/08.6_CONTEXT.md`
+- [x] Same compiled graph: `guard_input` / `guard_output`; isolate RAG text; rewrite `SYSTEM_PROMPT` as Claire’s compliance assistant
+- [x] Stacked layers (input + isolate + output); PHI scanned on **output**, not prompt-only
+- [x] `GET /agent/guardrails/summary`; logs type/name/run_id only (no PHI)
+- [x] Tests: `tests/pipelines/test_agent_guardrails.py`; evidence: `data/eval/guardrail_cases.md`
 
 ## In progress
 

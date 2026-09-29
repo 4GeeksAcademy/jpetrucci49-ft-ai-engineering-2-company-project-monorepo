@@ -7,6 +7,10 @@ import uuid
 from data.pipelines.rag import NO_INFORMATION, generate_answer, retrieve
 
 from agent.classify import classify_turn
+from agent.harness.input_guard import apply_input_guard
+from agent.harness.isolate import wrap_context
+from agent.harness.observe import record
+from agent.harness.output_guard import apply_output_guard
 from agent.memory.phi import PHI_REFUSAL, contains_phi
 from agent.memory.propose import REMEMBER_PROMPT, looks_like_memory_intent, should_propose
 from agent.memory.store import (
@@ -72,6 +76,9 @@ def intake(state: DeskAgentState) -> dict:
         "memory_had_pending": get_pending(user_id) is not None,
         "memory_proposal_id": "",
         "memory_outcome": "",
+        "input_label": "domain",
+        "guardrail_name": "",
+        "guardrail_blocked": False,
     }
     if not question:
         update["error"] = EMPTY_QUESTION
@@ -95,7 +102,19 @@ def lookup_incident(state: DeskAgentState) -> dict:
 
 
 def answer_incident(state: DeskAgentState) -> dict:
-    return _step("answer_incident", answer=ticket_sentence(state.get("incident_result") or {}))
+    result = state.get("incident_result") or {}
+    if result.get("ok"):
+        incidents = result.get("incidents") or []
+        if not incidents or any(
+            not isinstance(row, dict) or "id" not in row for row in incidents
+        ):
+            record("structural", run_id=state.get("run_id") or "")
+            return _step(
+                "answer_incident",
+                answer=TICKET_FALLBACK,
+                guardrail_name="structural",
+            )
+    return _step("answer_incident", answer=ticket_sentence(result))
 
 
 def refuse_incident(_state: DeskAgentState) -> dict:
@@ -109,7 +128,19 @@ def lookup_inventory(state: DeskAgentState) -> dict:
 
 
 def answer_inventory(state: DeskAgentState) -> dict:
-    return _step("answer_inventory", answer=stock_sentence(state.get("inventory_result") or {}))
+    result = state.get("inventory_result") or {}
+    if result.get("ok"):
+        supplies = result.get("supplies") or []
+        if not supplies or any(
+            not isinstance(row, dict) or not row.get("sku") for row in supplies
+        ):
+            record("structural", run_id=state.get("run_id") or "")
+            return _step(
+                "answer_inventory",
+                answer=STOCK_FALLBACK,
+                guardrail_name="structural",
+            )
+    return _step("answer_inventory", answer=stock_sentence(result))
 
 
 def refuse_inventory(_state: DeskAgentState) -> dict:
@@ -122,7 +153,8 @@ def retrieve_policy(state: DeskAgentState) -> dict:
 
 def generate_policy(state: DeskAgentState) -> dict:
     question = wrap_question(state["question"], state.get("memory_notes") or "")
-    rag_answer = generate_answer(question, state["context"])
+    isolated = wrap_context(state.get("context") or [])
+    rag_answer = generate_answer(question, isolated)
     return _step("generate_policy", answer=_attach_tool_sentences(state, rag_answer))
 
 
@@ -136,6 +168,39 @@ def refuse(state: DeskAgentState) -> dict:
 
 def reject(_state: DeskAgentState) -> dict:
     return _step("reject", error=EMPTY_QUESTION, answer="")
+
+
+def guard_input(state: DeskAgentState) -> dict:
+    label, canned = apply_input_guard(
+        state.get("question") or "",
+        run_id=state.get("run_id") or "",
+    )
+    if canned is None:
+        return _step(
+            "guard_input",
+            input_label=label,
+            guardrail_name="",
+            guardrail_blocked=False,
+        )
+    return _step(
+        "guard_input",
+        answer=canned,
+        input_label=label,
+        guardrail_name=label,
+        guardrail_blocked=True,
+        memory_outcome="",
+    )
+
+
+def guard_output(state: DeskAgentState) -> dict:
+    text, hit = apply_output_guard(
+        state.get("answer"),
+        run_id=state.get("run_id") or "",
+        intent=state.get("intent") or "",
+        input_label=state.get("input_label") or "domain",
+    )
+    name = hit or (state.get("guardrail_name") or "")
+    return _step("guard_output", answer=text, guardrail_name=name)
 
 
 def resolve_memory(state: DeskAgentState) -> dict:
@@ -159,6 +224,12 @@ def propose_memory(state: DeskAgentState) -> dict:
     answer = (state.get("answer") or "").strip()
     proposal_id = state.get("memory_proposal_id") or ""
     outcome = state.get("memory_outcome") or ""
+    if state.get("guardrail_blocked"):
+        return _step(
+            "propose_memory",
+            memory_proposal_id=proposal_id,
+            memory_outcome=outcome,
+        )
     if get_pending(user_id) is not None:
         return _step(
             "propose_memory",
@@ -223,6 +294,12 @@ def route_after_intake(state: DeskAgentState) -> str:
         return "reject"
     if state.get("memory_had_pending"):
         return "resolve_memory"
+    return "guard_input"
+
+
+def route_after_guard_input(state: DeskAgentState) -> str:
+    if state.get("guardrail_blocked"):
+        return "end"
     return "classify"
 
 

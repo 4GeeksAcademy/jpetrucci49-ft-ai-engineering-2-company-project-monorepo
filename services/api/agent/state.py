@@ -22,4 +22,7 @@ class DeskAgentState(TypedDict):
     memory_had_pending: bool
     memory_proposal_id: str
     memory_outcome: str
+    input_label: str
+    guardrail_name: str
+    guardrail_blocked: bool
     path: Annotated[list[str], add]
