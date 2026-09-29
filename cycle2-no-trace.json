@@ -1,0 +1,25 @@
+{
+    "run_id": "d181d766-8a19-48ba-a976-957e39fa7a28",
+    "path": [
+        "intake",
+        "resolve_memory",
+        "classify",
+        "retrieve_policy",
+        "refuse",
+        "propose_memory"
+    ],
+    "question": "no",
+    "intent": "rag",
+    "sources_used": [
+        "rag"
+    ],
+    "context_sources": [],
+    "incident_ids": [],
+    "incident_error": null,
+    "supply_skus": [],
+    "inventory_error": null,
+    "answer": "I don't have enough information in the HealthCore knowledge base to answer that reliably. Please check with billing (Tom Callahan) or clinical operations rather than guessing coverage, fees, or timeframes.",
+    "error": null,
+    "memory_proposal_id": "5cb04c2f-df15-4799-86a2-142411372fa2",
+    "memory_outcome": "rejected"
+}
