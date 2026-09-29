@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { RfpFilePicker } from "@/components/rfp/RfpFilePicker";
 import {
   getRfpSections,
   getRfpTicket,
@@ -14,6 +15,16 @@ import {
 } from "@/lib/api/rfp";
 
 const POLL_MS = 3000;
+
+const DEPARTMENT_LABELS: Record<string, string> = {
+  revenue: "Revenue Cycle",
+  clinical: "Clinical Operations",
+  compliance: "Compliance",
+};
+
+function departmentLabel(departmentId: string): string {
+  return DEPARTMENT_LABELS[departmentId] ?? departmentId.replaceAll("_", " ");
+}
 
 function statusLabel(ticket: RfpTicket): string {
   if (ticket.status === "analyzing") {
@@ -29,7 +40,8 @@ function statusLabel(ticket: RfpTicket): string {
 }
 
 export function RfpIntakePage() {
-  const [file, setFile] = useState<File | null>(null);
+  const chosenFile = useRef<File | null>(null);
+  const [hasFile, setHasFile] = useState(false);
   const [ticket, setTicket] = useState<RfpTicket | null>(null);
   const [sections, setSections] = useState<RfpSection[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +83,15 @@ export function RfpIntakePage() {
     };
   }, [ticketId, ticketStatus]);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file) {
+  function onFileSelected(file: File) {
+    chosenFile.current = file;
+    setHasFile(true);
+    setError(null);
+  }
+
+  async function onUpload() {
+    const pdf = chosenFile.current;
+    if (!pdf) {
       setError("Choose a PDF RFP to upload.");
       return;
     }
@@ -82,7 +100,7 @@ export function RfpIntakePage() {
     setTicket(null);
     setSections([]);
     try {
-      const created = await uploadRfpPdf(file);
+      const created = await uploadRfpPdf(pdf);
       setTicket({
         ticket_id: created.ticket_id,
         rfp_id: null,
@@ -102,38 +120,28 @@ export function RfpIntakePage() {
     }
   }
 
-  const summary = ticket?.handoff_json?.synthesizer_summary;
-
   return (
     <div className="space-y-6">
       <header>
         <h2 className="text-2xl font-semibold text-slate-900">RFP intake</h2>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          For Tom Callahan (Revenue Cycle). Upload an institutional RFP PDF. Intake routes work to
-          Revenue Cycle, Clinical Operations, and Compliance — without opening the original file.
+          Upload an institutional RFP as a PDF. Intake classifies the document and lists what Revenue
+          Cycle, Clinical Operations, and Compliance each need to review — without showing the original
+          file.
         </p>
       </header>
 
-      <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <label htmlFor="rfp-pdf" className="block text-sm font-medium text-slate-800">
-          RFP PDF
-        </label>
-        <input
-          id="rfp-pdf"
-          name="file"
-          type="file"
-          accept="application/pdf,.pdf"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-slate-700"
-        />
+      <div className="space-y-3">
+        <RfpFilePicker disabled={isUploading} onFileSelected={onFileSelected} />
         <button
-          type="submit"
-          disabled={isUploading}
+          type="button"
+          onClick={() => void onUpload()}
+          disabled={isUploading || !hasFile}
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {isUploading ? "Uploading…" : "Upload and analyze"}
         </button>
-      </form>
+      </div>
 
       {isUploading ? <LoadingState label="Creating ticket…" layout="inline" /> : null}
       {error ? (
@@ -142,7 +150,7 @@ export function RfpIntakePage() {
           onRetry={() => {
             setError(null);
           }}
-          homeHref="/"
+          retryLabel="Try another upload"
         />
       ) : null}
 
@@ -181,14 +189,12 @@ export function RfpIntakePage() {
             </dl>
           ) : null}
 
-          {summary ? <p className="text-sm text-slate-800">{summary}</p> : null}
-
           {sections.length > 0 && ticket.status === "intake_complete" ? (
             <div className="grid gap-3 md:grid-cols-3">
               {sections.map((section) => (
                 <article key={section.department_id} className="rounded-md border border-slate-200 p-3">
-                  <h3 className="text-sm font-semibold text-slate-900">{section.owner}</h3>
-                  <p className="text-xs capitalize text-slate-500">{section.department_id}</p>
+                  <h3 className="text-sm font-semibold text-slate-900">{departmentLabel(section.department_id)}</h3>
+                  <p className="text-xs text-slate-500">Department review</p>
                   <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
                     {section.key_aspects.map((aspect) => (
                       <li key={aspect}>{aspect}</li>
