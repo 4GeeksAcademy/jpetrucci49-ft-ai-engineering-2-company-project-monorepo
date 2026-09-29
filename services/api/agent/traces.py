@@ -88,6 +88,8 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
         "inventory_error": inventory.get("error"),
         "answer": state.get("answer", ""),
         "error": error or None,
+        "memory_proposal_id": state.get("memory_proposal_id") or None,
+        "memory_outcome": state.get("memory_outcome") or None,
     }
 
 

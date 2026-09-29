@@ -7,6 +7,16 @@ import uuid
 from data.pipelines.rag import NO_INFORMATION, generate_answer, retrieve
 
 from agent.classify import classify_turn
+from agent.memory.phi import PHI_REFUSAL, contains_phi
+from agent.memory.propose import REMEMBER_PROMPT, looks_like_memory_intent, should_propose
+from agent.memory.store import (
+    format_notes,
+    get_pending,
+    log_phi_discard,
+    propose,
+    resolve,
+    wrap_question,
+)
 from agent.state import DeskAgentState
 from agent.tools.incidents import (
     TICKET_FALLBACK,
@@ -29,6 +39,10 @@ def _step(name: str, **updates) -> dict:
     return updates
 
 
+def _user_id(state: DeskAgentState) -> int:
+    return int(state.get("user_id") or 0)
+
+
 def _attach_tool_sentences(state: DeskAgentState, rag_answer: str) -> str:
     parts = [rag_answer]
     if state.get("intent") == "both":
@@ -41,6 +55,7 @@ def _attach_tool_sentences(state: DeskAgentState, rag_answer: str) -> str:
 def intake(state: DeskAgentState) -> dict:
     run_id = state.get("run_id") or str(uuid.uuid4())
     question = (state.get("question") or "").strip()
+    user_id = _user_id(state)
     update: dict = {
         "run_id": run_id,
         "question": question,
@@ -52,6 +67,11 @@ def intake(state: DeskAgentState) -> dict:
         "incident_result": {},
         "inventory_query": {},
         "inventory_result": {},
+        "user_id": user_id,
+        "memory_notes": format_notes(user_id),
+        "memory_had_pending": get_pending(user_id) is not None,
+        "memory_proposal_id": "",
+        "memory_outcome": "",
     }
     if not question:
         update["error"] = EMPTY_QUESTION
@@ -101,7 +121,8 @@ def retrieve_policy(state: DeskAgentState) -> dict:
 
 
 def generate_policy(state: DeskAgentState) -> dict:
-    rag_answer = generate_answer(state["question"], state["context"])
+    question = wrap_question(state["question"], state.get("memory_notes") or "")
+    rag_answer = generate_answer(question, state["context"])
     return _step("generate_policy", answer=_attach_tool_sentences(state, rag_answer))
 
 
@@ -117,9 +138,91 @@ def reject(_state: DeskAgentState) -> dict:
     return _step("reject", error=EMPTY_QUESTION, answer="")
 
 
+def resolve_memory(state: DeskAgentState) -> dict:
+    user_id = _user_id(state)
+    result = resolve(user_id, state.get("question") or "", run_id=state.get("run_id") or "")
+    update: dict = {
+        "memory_notes": format_notes(user_id),
+        "memory_had_pending": False,
+        "memory_proposal_id": result.proposal_id or "",
+        "memory_outcome": result.outcome or "",
+    }
+    if result.phi_refusal:
+        existing = (state.get("answer") or "").strip()
+        update["answer"] = f"{existing}\n\n{PHI_REFUSAL}".strip()
+    return _step("resolve_memory", **update)
+
+
+def propose_memory(state: DeskAgentState) -> dict:
+    user_id = _user_id(state)
+    question = state.get("question") or ""
+    answer = (state.get("answer") or "").strip()
+    proposal_id = state.get("memory_proposal_id") or ""
+    outcome = state.get("memory_outcome") or ""
+    if get_pending(user_id) is not None:
+        return _step(
+            "propose_memory",
+            memory_proposal_id=proposal_id,
+            memory_outcome=outcome,
+        )
+    if contains_phi(question) and looks_like_memory_intent(question):
+        proposal_id = log_phi_discard(
+            user_id,
+            run_id=state.get("run_id") or "",
+            question=question,
+        )
+        return _step(
+            "propose_memory",
+            answer=_append_unique(answer, PHI_REFUSAL),
+            memory_proposal_id=proposal_id,
+            memory_outcome="discarded_phi",
+        )
+    proposal = should_propose(question, answer)
+    if proposal is None:
+        return _step(
+            "propose_memory",
+            memory_proposal_id=proposal_id,
+            memory_outcome=outcome,
+        )
+    if contains_phi(proposal.text):
+        proposal_id = log_phi_discard(
+            user_id,
+            run_id=state.get("run_id") or "",
+            question=question,
+        )
+        return _step(
+            "propose_memory",
+            answer=_append_unique(answer, PHI_REFUSAL),
+            memory_proposal_id=proposal_id,
+            memory_outcome="discarded_phi",
+        )
+    pending = propose(
+        user_id,
+        proposal,
+        run_id=state.get("run_id") or "",
+        question=question,
+    )
+    return _step(
+        "propose_memory",
+        answer=_append_unique(answer, REMEMBER_PROMPT),
+        memory_proposal_id=pending.proposal_id if pending else "",
+        memory_outcome="",
+    )
+
+
+def _append_unique(answer: str, extra: str) -> str:
+    if extra in answer:
+        return answer
+    if not answer:
+        return extra
+    return f"{answer}\n\n{extra}"
+
+
 def route_after_intake(state: DeskAgentState) -> str:
     if not (state.get("question") or "").strip():
         return "reject"
+    if state.get("memory_had_pending"):
+        return "resolve_memory"
     return "classify"
 
 

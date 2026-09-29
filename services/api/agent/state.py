@@ -17,4 +17,9 @@ class DeskAgentState(TypedDict):
     incident_result: dict
     inventory_query: dict
     inventory_result: dict
+    user_id: int
+    memory_notes: str
+    memory_had_pending: bool
+    memory_proposal_id: str
+    memory_outcome: str
     path: Annotated[list[str], add]

@@ -72,3 +72,4 @@ services/api/suppliers.json
 services/api/incidents.json
 services/api/inventory.db
 services/api/inventory.db-journal
+services/api/agent_memory.json

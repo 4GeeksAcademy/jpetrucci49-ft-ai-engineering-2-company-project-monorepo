@@ -16,10 +16,12 @@ from agent.nodes import (
     intake,
     lookup_incident,
     lookup_inventory,
+    propose_memory,
     refuse,
     refuse_incident,
     refuse_inventory,
     reject,
+    resolve_memory,
     retrieve_policy,
     route_after_classify,
     route_after_intake,
@@ -44,7 +46,18 @@ GRAPH_NODES = frozenset(
         "generate_policy",
         "refuse",
         "reject",
+        "resolve_memory",
+        "propose_memory",
     }
+)
+
+_ANSWER_NODES = (
+    "answer_incident",
+    "refuse_incident",
+    "answer_inventory",
+    "refuse_inventory",
+    "refuse",
+    "generate_policy",
 )
 
 
@@ -62,12 +75,19 @@ def build_desk_graph() -> StateGraph:
     builder.add_node("generate_policy", generate_policy)
     builder.add_node("refuse", refuse)
     builder.add_node("reject", reject)
+    builder.add_node("resolve_memory", resolve_memory)
+    builder.add_node("propose_memory", propose_memory)
     builder.add_edge(START, "intake")
     builder.add_conditional_edges(
         "intake",
         route_after_intake,
-        {"reject": "reject", "classify": "classify"},
+        {
+            "reject": "reject",
+            "resolve_memory": "resolve_memory",
+            "classify": "classify",
+        },
     )
+    builder.add_edge("resolve_memory", "classify")
     builder.add_conditional_edges(
         "classify",
         route_after_classify,
@@ -100,13 +120,10 @@ def build_desk_graph() -> StateGraph:
         route_after_retrieve,
         {"refuse": "refuse", "generate_policy": "generate_policy"},
     )
-    builder.add_edge("answer_incident", END)
-    builder.add_edge("refuse_incident", END)
-    builder.add_edge("answer_inventory", END)
-    builder.add_edge("refuse_inventory", END)
-    builder.add_edge("refuse", END)
+    for name in _ANSWER_NODES:
+        builder.add_edge(name, "propose_memory")
+    builder.add_edge("propose_memory", END)
     builder.add_edge("reject", END)
-    builder.add_edge("generate_policy", END)
     return builder
 
 
@@ -114,7 +131,7 @@ _checkpointer = MemorySaver()
 desk_graph = build_desk_graph().compile(checkpointer=_checkpointer)
 
 
-def _empty_state(run_id: str, question: str) -> dict[str, Any]:
+def _empty_state(run_id: str, question: str, user_id: int) -> dict[str, Any]:
     return {
         "run_id": run_id,
         "question": question,
@@ -126,14 +143,24 @@ def _empty_state(run_id: str, question: str) -> dict[str, Any]:
         "incident_result": {},
         "inventory_query": {},
         "inventory_result": {},
+        "user_id": user_id,
+        "memory_notes": "",
+        "memory_had_pending": False,
+        "memory_proposal_id": "",
+        "memory_outcome": "",
         "path": [],
     }
 
 
-def run_desk_agent(question: str, *, run_id: str | None = None) -> dict[str, Any]:
+def run_desk_agent(
+    question: str,
+    *,
+    user_id: int = 0,
+    run_id: str | None = None,
+) -> dict[str, Any]:
     """Invoke the compiled graph, checkpoint, and persist a queryable trace."""
     run_id = run_id or str(uuid.uuid4())
     config = {"configurable": {"thread_id": run_id}}
-    result = desk_graph.invoke(_empty_state(run_id, question), config=config)
+    result = desk_graph.invoke(_empty_state(run_id, question, user_id), config=config)
     persist_trace(result)
     return result

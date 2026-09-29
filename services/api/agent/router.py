@@ -31,10 +31,10 @@ class AgentQueryOut(BaseModel):
 @router.post("/query", response_model=AgentQueryOut)
 def agent_query(
     body: AgentQueryIn,
-    _: Annotated[UserPublic, Depends(get_current_user)],
+    user: Annotated[UserPublic, Depends(get_current_user)],
 ) -> AgentQueryOut:
     try:
-        result = run_desk_agent(body.question)
+        result = run_desk_agent(body.question, user_id=user.id)
     except RuntimeError as exc:
         logger.warning("agent query unavailable: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc)) from exc

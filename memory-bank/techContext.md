@@ -60,6 +60,7 @@
 22. **Desk agent incident tool (7.7)** — `classify` sets `intent` (`rag` | `incident` | `both`) from the question. Fallback copy is fixed. Traces record `sources_used` and `incident_ids`.
 23. **Desk agent inventory stretch (7.7)** — Separate tool in `agent/tools/inventory.py`. Intents `inventory` / `inventory_rag`. Ticket questions stay on the incident path. Traces add `supply_skus` / `inventory_error`.
 24. **HealthCore MCP server (7.8)** — Independent Streamable HTTP server at `mcps/healthcore/` (`uvicorn` `:8100`). Auth is `mcpauth` resource-server mode (RFC 9728 PRM + bearer JWT). FastMCP is not given `auth=` / `token_verifier`. Incident tools call `app.incidents.manager`; inventory is query-only (`inventory_mutate` always `inventory_read_only`). The desk graph calls tools through `langchain-mcp-adapters` `MultiServerMCPClient` (`MCP_SERVER_URL` + client-credentials token). `JWT_SECRET` is not an MCP token.
+25. **Desk-agent memory (8.5)** — TinyDB `items` + `decisions` (+ one pending row per JWT `user.id`) in `services/api/agent_memory.json` (`AGENT_MEMORY_DB_PATH`). Same `desk_graph`: `resolve_memory` after intake when pending exists, `propose_memory` after answer nodes. Approved notes are injected only into `generate_answer`'s question string, never into RAG `context` or Qdrant. PHI scan (HIPAA + UK GDPR) before showing a proposal and before consolidate. LangGraph `MemorySaver` stays the checkpointer only.
 
 ## Technical constraints
 
@@ -100,7 +101,7 @@ uv run python scripts/evaluate_sales_forecast.py
 uv run python scripts/index_knowledge.py
 uv run python scripts/eval_rag_recall.py
 uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py tests/pipelines/test_rag.py
-uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py
+uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py tests/pipelines/test_agent_memory.py
 # HealthCore MCP server (7.8) — after MCP_AUTH_ISSUER + MCP_RESOURCE are set
 npm run dev:mcp
 # PYTHONPATH=".:services/api" uv run --env-file .env uvicorn mcps.healthcore.server:app --host 0.0.0.0 --port 8100
