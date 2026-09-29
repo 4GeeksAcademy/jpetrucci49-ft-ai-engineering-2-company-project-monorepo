@@ -43,6 +43,17 @@ def contains_phi(text: str) -> bool:
     return any(pattern.search(blob) for pattern in _PATTERNS)
 
 
+def redact_phi(text: str) -> tuple[str, bool]:
+    """Replace identifier spans with ``[REDACTED]``. Uses the same patterns as ``contains_phi``."""
+    blob = text or ""
+    if not contains_phi(blob):
+        return blob, False
+    redacted = blob
+    for pattern in _PATTERNS:
+        redacted = pattern.sub("[REDACTED]", redacted)
+    return redacted, True
+
+
 def contains_quasi_identifier(text: str) -> bool:
     """Age + diagnosis + clinic, or name/patient + age + clinic."""
     blob = (text or "").strip()

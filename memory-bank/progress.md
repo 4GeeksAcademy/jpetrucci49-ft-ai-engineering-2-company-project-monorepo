@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk-agent harness and guardrails (8.6)_
+_Last updated: RFP intake & routing Part 1 (9.5)_
 
 ## Completed
 
@@ -299,6 +299,15 @@ _Last updated: Desk-agent harness and guardrails (8.6)_
 - [x] Stacked layers (input + isolate + output); PHI scanned on **output**, not prompt-only
 - [x] `GET /agent/guardrails/summary`; logs type/name/run_id only (no PHI)
 - [x] Tests: `tests/pipelines/test_agent_guardrails.py`; evidence: `data/eval/guardrail_cases.md`
+
+### RFP intake & routing Part 1 (9.5)
+
+- [x] Spec: `specs/09.5_RFP_INTAKE_SPECS.md`; context: `context/09.5_CONTEXT.md`
+- [x] Dedicated `rfp_intake` graph under `data/pipelines/rfp_intake/` (MarkItDown, readability, classifier, three workers, synthesizer)
+- [x] SQLModel tickets/metadata/sections on the inventory Postgres engine — not TinyDB
+- [x] `POST /rfp/tickets` 202 + background run; `GET` ticket + sections; CLI `scripts/run_rfp_intake.py`
+- [x] Backoffice `/rfp` upload + poll; BFF `/api/rfp/*`
+- [x] Tests: `tests/pipelines/test_rfp_intake.py` (formal accept, informal accept, EHR reject, missing volume, PHI redact)
 
 ## In progress
 
