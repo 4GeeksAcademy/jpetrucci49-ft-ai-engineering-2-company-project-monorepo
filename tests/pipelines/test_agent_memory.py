@@ -10,7 +10,7 @@ import pytest
 from agent.graph import run_desk_agent
 from agent.memory.classify import classify_memory_decision
 from agent.memory.consolidate import ITEM_CAP, consolidate_items
-from agent.memory.phi import PHI_REFUSAL, contains_phi
+from agent.memory.phi import contains_phi
 from agent.memory.propose import REMEMBER_PROMPT, should_propose
 from agent.memory.store import (
     MemoryProposal,
@@ -97,14 +97,12 @@ def test_memory_phi_rejected_visible(monkeypatch: pytest.MonkeyPatch) -> None:
     run_id = "b2222222-2222-4222-8222-000000000021"
     result = run_desk_agent(PHI_JOHNSON, user_id=user_id, run_id=run_id)
     answer = result.get("answer") or ""
-    assert PHI_REFUSAL in answer
-    assert "can't remember" in answer.lower() or "cannot store" in answer.lower()
+    assert "rephrase" in answer.lower()
+    assert "patient johnson" not in answer.casefold()
     assert get_pending(user_id) is None
     assert read(user_id) == []
     rows = list_decisions(user_id)
-    assert any(row.get("outcome") == "discarded_phi" for row in rows)
     assert all(row.get("proposed_text") != PHI_JOHNSON for row in rows)
-    assert any(row.get("proposed_text") == "[redacted]" for row in rows)
     _cleanup(run_id)
 
 
@@ -278,7 +276,11 @@ def test_consolidate_caps_and_dedupes() -> None:
 def test_refuse_path_still_mentions_no_information(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("agent.nodes.retrieve", lambda *_a, **_k: [])
     run_id = "ab888888-8888-4888-8888-000000000081"
-    result = run_desk_agent("What is the weather in Austin tomorrow?", user_id=81, run_id=run_id)
+    result = run_desk_agent(
+        "What is the HIPAA breach notification window for US clinics?",
+        user_id=81,
+        run_id=run_id,
+    )
     assert result["answer"] == NO_INFORMATION
     assert get_pending(81) is None
     _cleanup(run_id)

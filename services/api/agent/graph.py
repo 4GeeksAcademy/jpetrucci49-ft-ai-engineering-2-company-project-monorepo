@@ -13,6 +13,8 @@ from agent.nodes import (
     answer_inventory,
     classify,
     generate_policy,
+    guard_input,
+    guard_output,
     intake,
     lookup_incident,
     lookup_inventory,
@@ -24,6 +26,7 @@ from agent.nodes import (
     resolve_memory,
     retrieve_policy,
     route_after_classify,
+    route_after_guard_input,
     route_after_intake,
     route_after_inventory,
     route_after_lookup,
@@ -48,6 +51,8 @@ GRAPH_NODES = frozenset(
         "reject",
         "resolve_memory",
         "propose_memory",
+        "guard_input",
+        "guard_output",
     }
 )
 
@@ -77,6 +82,8 @@ def build_desk_graph() -> StateGraph:
     builder.add_node("reject", reject)
     builder.add_node("resolve_memory", resolve_memory)
     builder.add_node("propose_memory", propose_memory)
+    builder.add_node("guard_input", guard_input)
+    builder.add_node("guard_output", guard_output)
     builder.add_edge(START, "intake")
     builder.add_conditional_edges(
         "intake",
@@ -84,10 +91,15 @@ def build_desk_graph() -> StateGraph:
         {
             "reject": "reject",
             "resolve_memory": "resolve_memory",
-            "classify": "classify",
+            "guard_input": "guard_input",
         },
     )
-    builder.add_edge("resolve_memory", "classify")
+    builder.add_edge("resolve_memory", "guard_input")
+    builder.add_conditional_edges(
+        "guard_input",
+        route_after_guard_input,
+        {"classify": "classify", "end": END},
+    )
     builder.add_conditional_edges(
         "classify",
         route_after_classify,
@@ -121,7 +133,8 @@ def build_desk_graph() -> StateGraph:
         {"refuse": "refuse", "generate_policy": "generate_policy"},
     )
     for name in _ANSWER_NODES:
-        builder.add_edge(name, "propose_memory")
+        builder.add_edge(name, "guard_output")
+    builder.add_edge("guard_output", "propose_memory")
     builder.add_edge("propose_memory", END)
     builder.add_edge("reject", END)
     return builder
@@ -148,6 +161,9 @@ def _empty_state(run_id: str, question: str, user_id: int) -> dict[str, Any]:
         "memory_had_pending": False,
         "memory_proposal_id": "",
         "memory_outcome": "",
+        "input_label": "domain",
+        "guardrail_name": "",
+        "guardrail_blocked": False,
         "path": [],
     }
 

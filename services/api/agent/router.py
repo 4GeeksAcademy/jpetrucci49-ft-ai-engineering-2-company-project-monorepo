@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from agent.graph import run_desk_agent
+from agent.harness.observe import summary as guardrail_summary
 from agent.nodes import EMPTY_QUESTION
 from agent.traces import load_trace
 from auth.dependencies import get_current_user
@@ -60,3 +61,10 @@ def agent_trace(
     if payload is None:
         raise HTTPException(status_code=404, detail="trace not found")
     return payload
+
+
+@router.get("/guardrails/summary")
+def agent_guardrail_summary(
+    _: Annotated[UserPublic, Depends(get_current_user)],
+) -> dict[str, Any]:
+    return {"counts": guardrail_summary()}

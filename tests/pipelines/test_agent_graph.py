@@ -13,6 +13,7 @@ from agent.classify import classify_turn
 from agent.nodes import (
     EMPTY_QUESTION,
     route_after_classify,
+    route_after_guard_input,
     route_after_intake,
     route_after_inventory,
     route_after_lookup,
@@ -161,7 +162,9 @@ def test_classify_turn_routes_stock() -> None:
 
 def test_route_predicates() -> None:
     assert route_after_intake({"question": "", "error": EMPTY_QUESTION}) == "reject"
-    assert route_after_intake({"question": "  cancel  "}) == "classify"
+    assert route_after_intake({"question": "  cancel  "}) == "guard_input"
+    assert route_after_guard_input({"guardrail_blocked": True}) == "end"
+    assert route_after_guard_input({"guardrail_blocked": False}) == "classify"
     assert route_after_intake({"question": "yes", "memory_had_pending": True}) == (
         "resolve_memory"
     )
@@ -217,9 +220,11 @@ def test_checkpoint_matches_invoke(monkeypatch: pytest.MonkeyPatch) -> None:
     assert snapshot["error"] == result["error"]
     assert infer_path(result) == [
         "intake",
+        "guard_input",
         "classify",
         "retrieve_policy",
         "generate_policy",
+        "guard_output",
         "propose_memory",
     ]
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
@@ -335,7 +340,10 @@ def test_mocked_empty_retrieve_refuses_without_generate(monkeypatch: pytest.Monk
 
     monkeypatch.setattr("agent.nodes.generate_answer", _fail_generate)
     run_id = "33333333-3333-4333-8333-333333333333"
-    result = run_desk_agent("What is the weather in Austin tomorrow?", run_id=run_id)
+    result = run_desk_agent(
+        "What is the HIPAA breach notification window for US clinics?",
+        run_id=run_id,
+    )
     assert result["answer"] == NO_INFORMATION
     saved = load_trace(run_id)
     assert saved is not None

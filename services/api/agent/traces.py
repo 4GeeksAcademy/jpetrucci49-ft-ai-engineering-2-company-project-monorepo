@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from agent.harness.observe import LABEL_TYPE
 from agent.state import DeskAgentState
 
 _UUID = re.compile(
@@ -90,7 +91,15 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
         "error": error or None,
         "memory_proposal_id": state.get("memory_proposal_id") or None,
         "memory_outcome": state.get("memory_outcome") or None,
+        "guardrail": _guardrail_trace(state),
     }
+
+
+def _guardrail_trace(state: DeskAgentState) -> dict[str, str] | None:
+    name = (state.get("guardrail_name") or "").strip()
+    if not name:
+        return None
+    return {"type": LABEL_TYPE.get(name, "content"), "name": name}
 
 
 def persist_trace(state: DeskAgentState) -> Path:
