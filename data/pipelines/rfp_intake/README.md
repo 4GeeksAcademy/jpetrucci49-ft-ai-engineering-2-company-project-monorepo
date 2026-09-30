@@ -15,7 +15,7 @@ START → convert → classify
 | `discarded` | Classifier reject (`not_an_rfp`) or crash (`pipeline_error`) |
 | `intake_complete` | Synthesizer persisted; Sales can read key aspects |
 
-**Convert:** MarkItDown PDF→Markdown, `contains_phi` + `[REDACTED]`, `py-readability-metrics` on the redacted text, write `data/raw/rfp/{ticket_id}.md`.
+**Convert:** MarkItDown with the `[pdf]` extra (`uv add 'markitdown[pdf]'`) PDF→Markdown, `contains_phi` + `[REDACTED]`, `py-readability-metrics` on the redacted text, write `data/raw/rfp/{ticket_id}.md`.
 
 **Handoff** (`rfp_tickets.handoff_json`) for Part 2 — do not re-parse the PDF:
 

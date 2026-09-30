@@ -63,7 +63,7 @@ export function RfpIntakePage() {
           return;
         }
         setTicket(next);
-        if (next.status !== "analyzing") {
+        if (next.status === "intake_complete") {
           setSections(await getRfpSections(activeTicketId));
         }
       } catch (caught) {

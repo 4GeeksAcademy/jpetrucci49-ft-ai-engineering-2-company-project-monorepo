@@ -14,8 +14,21 @@ RFP_RAW_DIR = RAW_DIR / "rfp"
 
 def pdf_to_markdown(pdf_path: str | Path) -> str:
     from markitdown import MarkItDown
+    from markitdown._exceptions import FileConversionException, MissingDependencyException
 
-    result = MarkItDown().convert(str(pdf_path))
+    try:
+        result = MarkItDown().convert(str(pdf_path))
+    except MissingDependencyException as exc:
+        raise RuntimeError(
+            "MarkItDown PDF extras are missing. Install with: uv add 'markitdown[pdf]'"
+        ) from exc
+    except FileConversionException as exc:
+        detail = str(exc).lower()
+        if "have not been installed" in detail or "optional dependency" in detail:
+            raise RuntimeError(
+                "MarkItDown PDF extras are missing. Install with: uv add 'markitdown[pdf]'"
+            ) from exc
+        raise
     return (getattr(result, "text_content", None) or "").strip()
 
 
