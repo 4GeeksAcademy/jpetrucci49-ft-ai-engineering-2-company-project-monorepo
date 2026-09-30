@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,15 @@ def compute_readability(text: str) -> dict[str, float]:
         return {}
     _ensure_nltk()
     try:
-        from readability import Readability
+        # py-readability-metrics 1.4.x ships a regex with `\/` (Python 3.12 SyntaxWarning).
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"invalid escape sequence",
+                category=SyntaxWarning,
+                module=r"readability\.text\.analyzer",
+            )
+            from readability import Readability
     except ImportError:
         return {}
 

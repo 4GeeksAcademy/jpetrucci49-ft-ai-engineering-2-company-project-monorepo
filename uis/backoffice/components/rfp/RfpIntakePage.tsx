@@ -9,9 +9,11 @@ import {
   getRfpSections,
   getRfpTicket,
   RfpApiError,
+  startRfpDraft,
+  uploadRfpPdf,
+  type RfpEvaluationResult,
   type RfpSection,
   type RfpTicket,
-  uploadRfpPdf,
 } from "@/lib/api/rfp";
 
 const POLL_MS = 3000;
@@ -26,9 +28,43 @@ function departmentLabel(departmentId: string): string {
   return DEPARTMENT_LABELS[departmentId] ?? departmentId.replaceAll("_", " ");
 }
 
+function shouldPoll(ticket: RfpTicket): boolean {
+  if (ticket.status === "analyzing") {
+    return true;
+  }
+  if (ticket.error_code === "draft_pipeline_error") {
+    return false;
+  }
+  return (
+    (ticket.status === "drafting" || ticket.status === "under_evaluation") &&
+    ticket.part2_handoff_json == null
+  );
+}
+
+function canStartDraft(ticket: RfpTicket): boolean {
+  if (ticket.status === "intake_complete") {
+    return true;
+  }
+  return (
+    ticket.error_code === "draft_pipeline_error" &&
+    (ticket.status === "drafting" || ticket.status === "under_evaluation")
+  );
+}
+
 function statusLabel(ticket: RfpTicket): string {
   if (ticket.status === "analyzing") {
     return "Analyzing";
+  }
+  if (ticket.status === "drafting") {
+    return ticket.error_code === "draft_pipeline_error"
+      ? "Draft failed — retry generate"
+      : "Drafting";
+  }
+  if (ticket.status === "under_evaluation") {
+    return "Under evaluation";
+  }
+  if (ticket.status === "needs_human_review") {
+    return "Needs human review";
   }
   if (ticket.status === "intake_complete") {
     return ticket.phi_detected ? "Intake complete — PHI flagged for Compliance" : "Intake complete";
@@ -39,6 +75,32 @@ function statusLabel(ticket: RfpTicket): string {
   return "Discarded (not an RFP)";
 }
 
+function checkLabel(pass: boolean | undefined): string {
+  return pass ? "Pass" : "Fail";
+}
+
+function EvalSummary({ evaluation }: { evaluation: RfpEvaluationResult | null }) {
+  if (!evaluation) {
+    return null;
+  }
+  return (
+    <div className="mt-3 space-y-1 text-xs text-slate-600">
+      {evaluation.needs_human_review ? (
+        <p className="font-semibold text-amber-800">Provisional — iteration limit</p>
+      ) : (
+        <p className="font-medium text-slate-700">
+          {evaluation.overall_pass ? "Evaluation passed" : "Evaluation incomplete"}
+        </p>
+      )}
+      <ul className="list-disc space-y-0.5 pl-4">
+        <li>Readability: {checkLabel(evaluation.readability?.pass)}</li>
+        <li>Relevance: {checkLabel(evaluation.relevance?.pass)}</li>
+        <li>Compliance: {checkLabel(evaluation.compliance?.pass)}</li>
+      </ul>
+    </div>
+  );
+}
+
 export function RfpIntakePage() {
   const chosenFile = useRef<File | null>(null);
   const [hasFile, setHasFile] = useState(false);
@@ -46,11 +108,12 @@ export function RfpIntakePage() {
   const [sections, setSections] = useState<RfpSection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const ticketId = ticket?.ticket_id ?? null;
-  const ticketStatus = ticket?.status ?? null;
+  const pollTicket = ticket != null && shouldPoll(ticket);
 
   useEffect(() => {
-    if (!ticketId || ticketStatus !== "analyzing") {
+    if (!ticketId || !pollTicket) {
       return;
     }
     const activeTicketId = ticketId;
@@ -63,7 +126,11 @@ export function RfpIntakePage() {
           return;
         }
         setTicket(next);
-        if (next.status === "intake_complete") {
+        const readyForSections =
+          next.status === "intake_complete" ||
+          next.part2_handoff_json != null ||
+          next.status === "needs_human_review";
+        if (readyForSections) {
           setSections(await getRfpSections(activeTicketId));
         }
       } catch (caught) {
@@ -81,7 +148,7 @@ export function RfpIntakePage() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [ticketId, ticketStatus]);
+  }, [ticketId, pollTicket]);
 
   function onFileSelected(file: File) {
     chosenFile.current = file;
@@ -112,6 +179,7 @@ export function RfpIntakePage() {
         updated_at: new Date().toISOString(),
         metadata: null,
         handoff_json: null,
+        part2_handoff_json: null,
       });
     } catch (caught) {
       setError(caught instanceof RfpApiError ? caught.message : "Unable to upload the RFP.");
@@ -119,6 +187,29 @@ export function RfpIntakePage() {
       setIsUploading(false);
     }
   }
+
+  async function onGenerateDraft() {
+    if (!ticket) {
+      return;
+    }
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const created = await startRfpDraft(ticket.ticket_id);
+      setTicket({
+        ...ticket,
+        status: created.status,
+        error_code: null,
+        part2_handoff_json: null,
+      });
+    } catch (caught) {
+      setError(caught instanceof RfpApiError ? caught.message : "Unable to start draft generation.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  const showIntakeSections = sections.length > 0 && ticket != null && ticket.status !== "analyzing";
 
   return (
     <div className="space-y-6">
@@ -150,7 +241,7 @@ export function RfpIntakePage() {
           onRetry={() => {
             setError(null);
           }}
-          retryLabel="Try another upload"
+          retryLabel="Dismiss"
         />
       ) : null}
 
@@ -162,6 +253,9 @@ export function RfpIntakePage() {
             <p className="mt-2 text-sm font-semibold text-slate-900">{statusLabel(ticket)}</p>
             {ticket.status === "analyzing" ? (
               <LoadingState label="Conversion and department analysis running…" layout="inline" />
+            ) : null}
+            {shouldPoll(ticket) && ticket.status !== "analyzing" ? (
+              <LoadingState label="Generating and evaluating proposal drafts…" layout="inline" />
             ) : null}
           </div>
 
@@ -189,11 +283,22 @@ export function RfpIntakePage() {
             </dl>
           ) : null}
 
-          {ticket.status === "intake_complete" && ticket.handoff_json?.synthesizer_summary ? (
+          {ticket.handoff_json?.synthesizer_summary ? (
             <p className="text-sm text-slate-800">{ticket.handoff_json.synthesizer_summary}</p>
           ) : null}
 
-          {sections.length > 0 && ticket.status === "intake_complete" ? (
+          {canStartDraft(ticket) ? (
+            <button
+              type="button"
+              onClick={() => void onGenerateDraft()}
+              disabled={isGenerating}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isGenerating ? "Starting…" : "Generate proposal draft"}
+            </button>
+          ) : null}
+
+          {showIntakeSections ? (
             <div className="grid gap-3 md:grid-cols-3">
               {sections.map((section) => (
                 <article key={section.department_id} className="rounded-md border border-slate-200 p-3">
@@ -218,6 +323,13 @@ export function RfpIntakePage() {
                           <li key={question}>{question}</li>
                         ))}
                       </ul>
+                    </div>
+                  ) : null}
+                  {section.draft_content ? (
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="text-xs font-medium uppercase text-slate-500">Draft</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{section.draft_content}</p>
+                      <EvalSummary evaluation={section.evaluation_results} />
                     </div>
                   ) : null}
                 </article>

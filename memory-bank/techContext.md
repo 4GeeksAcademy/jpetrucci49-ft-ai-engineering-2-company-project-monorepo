@@ -63,6 +63,7 @@
 25. **Desk-agent memory (8.5)** — TinyDB `items` + `decisions` (+ one pending row per JWT `user.id`) in `services/api/agent_memory.json` (`AGENT_MEMORY_DB_PATH`). Same `desk_graph`: `resolve_memory` after intake when pending exists, `propose_memory` after answer nodes. Approved notes are injected only into `generate_answer`'s question string, never into RAG `context` or Qdrant. PHI scan (HIPAA + UK GDPR) before showing a proposal and before consolidate. LangGraph `MemorySaver` stays the checkpointer only.
 26. **Desk-agent harness (8.6)** — Same Claire Whitfield compliance graph. Stacked deterministic guards in `services/api/agent/harness/` (input classify/short-circuit, RAG/tool isolation, output PHI/leak/sensitive/structural). `SYSTEM_PROMPT` is the compliance assistant. Hits logged as type+name+run_id only; `GET /agent/guardrails/summary`. Tests: `tests/pipelines/test_agent_guardrails.py`.
 27. **RFP intake (9.5 Part 1)** — Dedicated `data/pipelines/rfp_intake/` LangGraph (not `desk_graph`). Tickets in Postgres via SQLModel on the inventory engine (`rfp_tickets`, `rfp_metadata`, `rfp_department_sections`). `POST /rfp/tickets` returns 202 and runs convert (MarkItDown) + classifier + orchestrator/workers/synthesizer in a BackgroundTask. Statuses: `analyzing` → `intake_complete` | `discarded`. Backoffice `/rfp` polls. Tests: `tests/pipelines/test_rfp_intake.py`.
+28. **RFP draft (9.6 Part 2)** — Dedicated `data/pipelines/rfp_draft/` LangGraph. Reads Part 1 `handoff_json` only (no PDF re-ingest). Parallel department generators + readability/relevance/compliance evaluators, loop cap `MAX_DRAFT_ITERATIONS=3`. Persists `draft_content` / `evaluation_results` and `part2_handoff_json`. Statuses: `drafting` → `under_evaluation` | `needs_human_review`. `POST /rfp/tickets/{id}/draft` 202. Tests: `tests/pipelines/test_rfp_draft.py`.
 
 ## Technical constraints
 
@@ -103,7 +104,7 @@ uv run python scripts/evaluate_sales_forecast.py
 uv run python scripts/index_knowledge.py
 uv run python scripts/eval_rag_recall.py
 uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py tests/pipelines/test_rag.py
-uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py tests/pipelines/test_agent_memory.py tests/pipelines/test_agent_guardrails.py tests/pipelines/test_rfp_intake.py
+uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py tests/pipelines/test_agent_memory.py tests/pipelines/test_agent_guardrails.py tests/pipelines/test_rfp_intake.py tests/pipelines/test_rfp_draft.py
 # HealthCore MCP server (7.8) — after MCP_AUTH_ISSUER + MCP_RESOURCE are set
 npm run dev:mcp
 # PYTHONPATH=".:services/api" uv run --env-file .env uvicorn mcps.healthcore.server:app --host 0.0.0.0 --port 8100

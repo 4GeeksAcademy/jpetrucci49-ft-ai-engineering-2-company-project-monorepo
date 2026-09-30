@@ -28,6 +28,10 @@ class RfpTicketNotFoundError(LookupError):
     pass
 
 
+class RfpTicketConflictError(ValueError):
+    pass
+
+
 def create_ticket(session: Session, *, pdf_bytes: bytes, created_by: str) -> TicketCreated:
     ticket_id = str(uuid4())
     RFP_RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -83,7 +87,8 @@ def get_ticket(session: Session, ticket_id: str) -> TicketOut:
         created_at=ticket.created_at,
         updated_at=ticket.updated_at,
         metadata=metadata_out,
-        handoff_json=ticket.handoff_json if ticket.status == "intake_complete" else None,
+        handoff_json=ticket.handoff_json,
+        part2_handoff_json=ticket.part2_handoff_json,
     )
 
 
@@ -101,10 +106,44 @@ def get_sections(session: Session, ticket_id: str) -> TicketSectionsOut:
             owner=owner,
             key_aspects=list((by_dept[dept].key_aspects if dept in by_dept else None) or []),
             open_questions=list((by_dept[dept].open_questions if dept in by_dept else None) or []),
+            draft_content=by_dept[dept].draft_content if dept in by_dept else None,
+            evaluation_results=by_dept[dept].evaluation_results if dept in by_dept else None,
         )
         for dept, owner in DEPARTMENT_OWNERS.items()
     ]
     return TicketSectionsOut(ticket_id=ticket_id, sections=sections)
+
+
+def start_draft(session: Session, ticket_id: str) -> TicketCreated:
+    ticket = session.get(RfpTicket, ticket_id)
+    if ticket is None:
+        raise RfpTicketNotFoundError(ticket_id)
+    if ticket.status in {"discarded", "analyzing"} or not ticket.handoff_json:
+        raise RfpTicketConflictError("Ticket is not ready for draft generation.")
+    retryable = (
+        ticket.status in {"drafting", "under_evaluation"}
+        and ticket.error_code == "draft_pipeline_error"
+    )
+    if ticket.status != "intake_complete" and not retryable:
+        raise RfpTicketConflictError("Draft generation is already running or finished.")
+    ticket.status = "drafting"
+    ticket.error_code = None
+    ticket.updated_at = utc_now()
+    session.add(ticket)
+    session.commit()
+    session.refresh(ticket)
+    return TicketCreated(ticket_id=ticket.ticket_id, status=ticket.status)
+
+
+def run_draft_job(ticket_id: str) -> None:
+    from data.pipelines.rfp_draft.graph import run_rfp_draft
+    from data.pipelines.rfp_draft.persist import persist_draft_pipeline_error
+
+    try:
+        run_rfp_draft(ticket_id)
+    except Exception:
+        logger.exception("rfp draft failed")
+        persist_draft_pipeline_error(ticket_id)
 
 
 def touch_updated_at(session: Session, ticket_id: str) -> None:
