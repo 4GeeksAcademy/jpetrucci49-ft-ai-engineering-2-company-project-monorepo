@@ -208,7 +208,11 @@ def init_inventory_schema() -> None:
     if _is_test_environment() and not os.getenv("SUPABASE_DATABASE_URL", "").strip():
         return
 
-    SQLModel.metadata.create_all(get_engine())
+    engine = get_engine()
+    SQLModel.metadata.create_all(engine)
+    from rfp.models import ensure_rfp_schema
+
+    ensure_rfp_schema(engine)
 
 
 def assert_destructive_reset_allowed() -> None:

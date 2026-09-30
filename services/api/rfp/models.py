@@ -7,14 +7,21 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import CheckConstraint, Column, DateTime, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, Text, UniqueConstraint, inspect, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
 JsonCol = JSONB().with_variant(JSON(), "sqlite")
 
-TICKET_STATUSES = ("analyzing", "discarded", "intake_complete")
+TICKET_STATUSES = (
+    "analyzing",
+    "discarded",
+    "intake_complete",
+    "drafting",
+    "under_evaluation",
+    "needs_human_review",
+)
 DISCARD_REASONS = ("not_an_rfp", "pipeline_error")
 DEPARTMENT_IDS = ("revenue", "clinical", "compliance")
 CLIENT_COUNTRIES = ("US", "UK", "unknown")
@@ -34,7 +41,8 @@ class RfpTicket(SQLModel, table=True):
     __tablename__ = "rfp_tickets"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('analyzing', 'discarded', 'intake_complete')",
+            "status IN ('analyzing', 'discarded', 'intake_complete', "
+            "'drafting', 'under_evaluation', 'needs_human_review')",
             name="ck_rfp_tickets_status",
         ),
         CheckConstraint(
@@ -52,6 +60,7 @@ class RfpTicket(SQLModel, table=True):
     raw_pdf_path: str = Field(max_length=512)
     markdown_path: str | None = Field(default=None, max_length=512)
     handoff_json: dict | None = Field(default=None, sa_column=Column(JsonCol, nullable=True))
+    part2_handoff_json: dict | None = Field(default=None, sa_column=Column(JsonCol, nullable=True))
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -114,3 +123,28 @@ class RfpDepartmentSection(SQLModel, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
+
+
+_STATUS_CHECK = (
+    "status IN ('analyzing', 'discarded', 'intake_complete', "
+    "'drafting', 'under_evaluation', 'needs_human_review')"
+)
+
+
+def ensure_rfp_schema(engine) -> None:
+    """Widen status CHECK and add ``part2_handoff_json`` on existing databases.
+
+    ``create_all`` will not ALTER a live Postgres CHECK from Part 1.
+    """
+    inspector = inspect(engine)
+    if "rfp_tickets" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("rfp_tickets")}
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if "part2_handoff_json" not in columns:
+            col_type = "JSONB" if dialect == "postgresql" else "JSON"
+            conn.execute(text(f"ALTER TABLE rfp_tickets ADD COLUMN part2_handoff_json {col_type}"))
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE rfp_tickets DROP CONSTRAINT IF EXISTS ck_rfp_tickets_status"))
+            conn.execute(text(f"ALTER TABLE rfp_tickets ADD CONSTRAINT ck_rfp_tickets_status CHECK ({_STATUS_CHECK})"))

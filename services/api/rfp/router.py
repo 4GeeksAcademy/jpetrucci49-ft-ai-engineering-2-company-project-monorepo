@@ -52,6 +52,26 @@ async def upload_ticket(
     )
 
 
+@router.post("/tickets/{ticket_id}/draft", status_code=status.HTTP_202_ACCEPTED)
+def start_draft(
+    ticket_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
+    _: CurrentUser,
+) -> JSONResponse:
+    try:
+        created = rfp_service.start_draft(session, ticket_id)
+    except rfp_service.RfpTicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Ticket not found.") from exc
+    except rfp_service.RfpTicketConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    background_tasks.add_task(rfp_service.run_draft_job, ticket_id)
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content=created.model_dump(),
+    )
+
+
 @router.get("/tickets/{ticket_id}", response_model=TicketOut)
 def read_ticket(ticket_id: str, session: DbSession, _: CurrentUser) -> TicketOut:
     try:

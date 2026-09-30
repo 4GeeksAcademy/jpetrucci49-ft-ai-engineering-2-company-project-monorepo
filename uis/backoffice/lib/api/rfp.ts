@@ -14,7 +14,24 @@ export class RfpApiError extends Error {
   }
 }
 
-export type RfpTicketStatus = "analyzing" | "discarded" | "intake_complete";
+export type RfpTicketStatus =
+  | "analyzing"
+  | "discarded"
+  | "intake_complete"
+  | "drafting"
+  | "under_evaluation"
+  | "needs_human_review";
+
+export interface RfpEvaluationResult {
+  department_id?: string;
+  readability?: { pass?: boolean; score?: Record<string, number>; details?: string };
+  relevance?: { pass?: boolean; missing_aspects?: string[] };
+  compliance?: { pass?: boolean; rule_ids?: string[]; violations?: string[]; contains_phi?: boolean };
+  overall_pass?: boolean;
+  feedback_for_generator?: string;
+  needs_human_review?: boolean;
+  iteration?: number;
+}
 
 export interface RfpMetadata {
   client_name: string | null;
@@ -50,6 +67,17 @@ export interface RfpTicket {
     }>;
     synthesizer_summary: string;
   } | null;
+  part2_handoff_json: {
+    ticket_id: string;
+    ticket_status: string;
+    departments: Array<{
+      department_id: string;
+      owner: string;
+      draft_content: string;
+      evaluation_results: RfpEvaluationResult;
+      needs_human_review: boolean;
+    }>;
+  } | null;
 }
 
 export interface RfpSection {
@@ -57,6 +85,8 @@ export interface RfpSection {
   owner: string;
   key_aspects: string[];
   open_questions: string[];
+  draft_content: string | null;
+  evaluation_results: RfpEvaluationResult | null;
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -114,4 +144,23 @@ export async function getRfpSections(ticketId: string): Promise<RfpSection[]> {
   }
   const payload = (await readJson(response)) as { sections?: RfpSection[] };
   return payload.sections ?? [];
+}
+
+export async function startRfpDraft(ticketId: string): Promise<{ ticket_id: string; status: RfpTicketStatus }> {
+  let response: Response;
+  try {
+    response = await authFetch(`/api/rfp/tickets/${ticketId}/draft`, { method: "POST" });
+  } catch (error) {
+    throw new RfpApiError(toUserFacingMessage(error, NETWORK_ERROR), 0);
+  }
+  if (!response.ok) {
+    const raw = await parseApiError(response);
+    throw new RfpApiError(raw || "Unable to start draft generation.", response.status);
+  }
+  const payload = (await readJson(response)) as { ticket_id?: unknown; status?: unknown };
+  if (typeof payload.ticket_id !== "string" || !payload.ticket_id) {
+    throw new RfpApiError(INVALID_RESPONSE, response.status);
+  }
+  const status = typeof payload.status === "string" ? (payload.status as RfpTicketStatus) : "drafting";
+  return { ticket_id: payload.ticket_id, status };
 }

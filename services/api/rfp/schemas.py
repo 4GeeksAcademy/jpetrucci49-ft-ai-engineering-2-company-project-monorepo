@@ -35,6 +35,7 @@ class TicketOut(BaseModel):
     updated_at: datetime
     metadata: RfpMetadataOut | None = None
     handoff_json: dict | None = None
+    part2_handoff_json: dict | None = None
 
 
 class DepartmentSectionOut(BaseModel):
@@ -42,6 +43,8 @@ class DepartmentSectionOut(BaseModel):
     owner: str
     key_aspects: list[str] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)
+    draft_content: str | None = None
+    evaluation_results: dict | None = None
 
 
 class TicketSectionsOut(BaseModel):

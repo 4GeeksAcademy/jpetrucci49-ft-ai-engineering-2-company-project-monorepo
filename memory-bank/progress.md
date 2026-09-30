@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: RFP intake & routing Part 1 (9.5)_
+_Last updated: RFP response generation Part 2 (9.6)_
 
 ## Completed
 
@@ -308,6 +308,15 @@ _Last updated: RFP intake & routing Part 1 (9.5)_
 - [x] `POST /rfp/tickets` 202 + background run; `GET` ticket + sections; CLI `scripts/run_rfp_intake.py`
 - [x] Backoffice `/rfp` upload + poll; BFF `/api/rfp/*`
 - [x] Tests: `tests/pipelines/test_rfp_intake.py` (formal accept, informal accept, EHR reject, missing volume, PHI redact)
+
+### RFP response generation Part 2 (9.6)
+
+- [x] Spec: `specs/09.6_RFP_RESPONSE_SPECS.md`; context: `context/09.5_CONTEXT.md`
+- [x] Dedicated `rfp_draft` graph under `data/pipelines/rfp_draft/` (generate → evaluate → loop cap 3 → persist)
+- [x] `part2_handoff_json` on the same ticket row; statuses `drafting` / `under_evaluation` / `needs_human_review`
+- [x] `POST /rfp/tickets/{id}/draft` 202 + background run; GET ticket/sections include drafts + evals; CLI `scripts/run_rfp_draft.py`
+- [x] Backoffice `/rfp` generate + poll + provisional badge
+- [x] Tests: `tests/pipelines/test_rfp_draft.py` (revenue generator, relevance fail, `baa-us`, PHI, persist)
 
 ## In progress
 
