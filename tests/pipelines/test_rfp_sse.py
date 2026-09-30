@@ -97,12 +97,13 @@ def test_stream_frame_after_create_ticket(sse_api) -> None:
     app, headers, engine = sse_api
     content_type, body = asyncio.run(asyncio.wait_for(_open_stream(app, headers, engine), timeout=10))
     assert "text/event-stream" in content_type
-    assert "event: rfp_ticket_created" in body
+    assert "event: agent_status_changed" in body
     payload = _data_payload(body)
-    assert set(payload) == {"ticket_id", "status", "agent_id", "flow_type"}
+    assert set(payload) == {"agent_id", "flow_id", "flow_type", "ticket_id", "status"}
     assert payload["status"] == "analyzing"
     assert payload["agent_id"] == "rfp_pipeline"
     assert payload["flow_type"] == "rfp_workflow"
+    assert payload["flow_id"] == payload["ticket_id"]
     assert payload["ticket_id"]
 
 
@@ -159,7 +160,7 @@ async def _open_stream(app, headers: dict[str, str], engine) -> tuple[str, str]:
             started.set()
         elif message["type"] == "http.response.body":
             chunks.append(message.get("body") or b"")
-            if b"event: rfp_ticket_created" in b"".join(chunks):
+            if b"event: agent_status_changed" in b"".join(chunks):
                 finished.set()
 
     async def publish_once_open() -> None:

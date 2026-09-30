@@ -65,7 +65,7 @@ API-level curl tests: [`services/api/README.md`](../../services/api/README.md#te
 
 ## RFP ticket notices (10.5)
 
-The operations dashboard at `/` lists the newest RFP tickets and listens for `rfp_ticket_created` through `/api/rfp/events`. The browser never calls port 8000.
+The operations dashboard at `/` lists the newest RFP tickets and listens for `agent_status_changed` through `/api/rfp/events`. The browser never calls port 8000.
 
 1. Sign in at http://localhost:3001/login and open http://localhost:3001/.
 2. Stop the API process. The **RFP tickets** block shows **Reconnecting…**. Rows already listed stay on screen.

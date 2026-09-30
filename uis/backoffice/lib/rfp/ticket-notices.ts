@@ -33,7 +33,7 @@ export function parseTicketEvent(frame: string): RfpTicketNotice | null {
       dataLines.push(line.slice("data:".length).trim());
     }
   }
-  if (eventName !== "rfp_ticket_created" || dataLines.length === 0) return null;
+  if (eventName !== "agent_status_changed" || dataLines.length === 0) return null;
   try {
     const payload = JSON.parse(dataLines.join("\n")) as Partial<RfpTicketNotice>;
     if (!payload.ticket_id || !payload.status) return null;

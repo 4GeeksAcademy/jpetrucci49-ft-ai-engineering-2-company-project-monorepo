@@ -28,10 +28,11 @@ def publish_ticket_created(ticket_id: str, status: str) -> None:
         frame = _frame(
             _next_id,
             {
+                "agent_id": "rfp_pipeline",
+                "flow_id": ticket_id,
+                "flow_type": "rfp_workflow",
                 "ticket_id": ticket_id,
                 "status": status,
-                "agent_id": "rfp_pipeline",
-                "flow_type": "rfp_workflow",
             },
         )
         for subscriber in tuple(_subscribers):
@@ -101,4 +102,4 @@ def _drop(subscriber: queue.Queue[str | None]) -> None:
 
 def _frame(event_id: int, payload: dict[str, str]) -> str:
     data = json.dumps(payload, separators=(",", ":"))
-    return f"id: {event_id}\nevent: rfp_ticket_created\ndata: {data}\n\n"
+    return f"id: {event_id}\nevent: agent_status_changed\ndata: {data}\n\n"

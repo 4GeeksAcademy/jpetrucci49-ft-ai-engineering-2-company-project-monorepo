@@ -330,7 +330,7 @@ _Last updated: SSE ticket notices (10.5)_
 ### SSE ticket notices (10.5)
 
 - [x] Spec: `specs/10.5_SSE_SPECS.md`; context: `context/10.5_CONTEXT.md`
-- [x] `GET /rfp/events` pushes `rfp_ticket_created` after `create_ticket` commits; in-process queue per listener
+- [x] `GET /rfp/events` pushes `agent_status_changed` after `create_ticket` commits; in-process queue per listener
 - [x] `GET /rfp/tickets` returns the newest 20 (`ticket_id`, `status` only) so a missed event is recovered on reconnect
 - [x] Backoffice `/` RFP tickets block streams `/api/rfp/events` with `authFetch` and dedupes on `ticket_id`
 - [x] Tests: `tests/pipelines/test_rfp_sse.py`
