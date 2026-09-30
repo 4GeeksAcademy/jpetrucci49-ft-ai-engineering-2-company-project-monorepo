@@ -77,7 +77,7 @@
 ## Key commands
 
 ```bash
-# All apps + dev hub
+# All apps, dev hub, and the MCP server (:8100)
 npm run dev
 
 # Root (M2)
@@ -107,7 +107,7 @@ uv run python scripts/index_knowledge.py
 uv run python scripts/eval_rag_recall.py
 uv run python -m pytest tests/pipelines/test_sales_forecast.py tests/pipelines/test_sales_forecast_cv.py tests/pipelines/test_rag.py
 uv run python -m pytest tests/pipelines/test_agent_graph.py tests/pipelines/test_rag.py tests/pipelines/test_agent_memory.py tests/pipelines/test_agent_guardrails.py tests/pipelines/test_rfp_intake.py tests/pipelines/test_rfp_draft.py tests/pipelines/test_rfp_approval.py tests/pipelines/test_rfp_sse.py
-# HealthCore MCP server (7.8) — after MCP_AUTH_ISSUER + MCP_RESOURCE are set
+# HealthCore MCP server (7.8) — also started by `npm run dev`. Needs MCP_AUTH_ISSUER + MCP_RESOURCE
 npm run dev:mcp
 # PYTHONPATH=".:services/api" uv run --env-file .env uvicorn mcps.healthcore.server:app --host 0.0.0.0 --port 8100
 # Optional Prefect Cloud (after PREFECT_API_KEY in services/api/.env):

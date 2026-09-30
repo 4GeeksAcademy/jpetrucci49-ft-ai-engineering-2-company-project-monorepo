@@ -282,6 +282,7 @@ _Last updated: SSE ticket notices (10.5)_
 - [x] `inventory_query` reads; `inventory_mutate` always errors `inventory_read_only`
 - [x] Desk agent `lookup_incident` / `lookup_inventory` go through `langchain-mcp-adapters` (no manager import in `agent/`)
 - [x] Tests: `tests/pipelines/test_agent_graph.py` (routing + `agent_incidents_via_mcp` + `mcp_inventory_mutate_rejected`); `test_rag.py` still required
+- [x] `npm run dev` starts the MCP server on port 8100 alongside the other apps
 
 ### Desk-agent memory (8.5)
 

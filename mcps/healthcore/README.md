@@ -11,7 +11,7 @@ PYTHONPATH=".:services/api" uv run --env-file .env --env-file services/api/.env 
   uvicorn mcps.healthcore.server:app --host 0.0.0.0 --port 8100
 ```
 
-Or `npm run dev:mcp`. The desk API stays on port **8000**.
+Or `npm run dev:mcp`. `npm run dev` starts this server with the other apps. The desk API stays on port **8000**.
 
 In Codespaces: Ports tab → forward **8100** → visibility **Public**. `MCP_RESOURCE` must be that public origin plus `/mcp` (no fragment), and it must match the token `aud`.
 

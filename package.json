@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n hub,website,backoffice,tracker,api -c blue,cyan,magenta,green,yellow \"npm run dev:hub\" \"npm run dev:website\" \"npm run dev:backoffice\" \"npm run dev:tracker\" \"npm run dev:api\"",
+    "dev": "concurrently -k -n hub,website,backoffice,tracker,api,mcp -c blue,cyan,magenta,green,yellow,white \"npm run dev:hub\" \"npm run dev:website\" \"npm run dev:backoffice\" \"npm run dev:tracker\" \"npm run dev:api\" \"npm run dev:mcp\"",
     "dev:uis": "concurrently -k -n website,backoffice,tracker -c cyan,magenta,green \"npm run dev:website\" \"npm run dev:backoffice\" \"npm run dev:tracker\"",
     "dev:hub": "npx serve public -l 4173",
     "dev:website": "npm run dev --prefix uis/website -- --port 3000",
