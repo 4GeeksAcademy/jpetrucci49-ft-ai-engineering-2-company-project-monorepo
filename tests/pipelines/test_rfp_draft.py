@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session, SQLModel, select
 
-from data.pipelines.rfp_draft.evaluate import combine_evaluation, evaluate_compliance, evaluate_relevance
+from data.pipelines.rfp_draft.evaluate import (
+    MAX_DRAFT_ITERATIONS,
+    combine_evaluation,
+    evaluate_compliance,
+    evaluate_relevance,
+)
 from data.pipelines.rfp_draft.generate import generate_section
 from data.pipelines.rfp_draft.graph import GRAPH_NODES, run_rfp_draft
 from data.pipelines.rfp_intake.workers import DEPARTMENT_OWNERS
@@ -221,3 +226,77 @@ def test_graph_persists_three_drafts_and_part2_handoff(rfp_db) -> None:
             assert row.evaluation_results
             assert row.approval_status is None
             assert "Jane" not in (row.draft_content or "")
+
+
+def test_combine_evaluation_sets_needs_human_review_at_cap() -> None:
+    failing = {
+        "readability": {"pass": True, "score": {}, "details": ""},
+        "relevance": {"pass": False, "missing_aspects": ["Covered population stated as 800."]},
+        "compliance": {"pass": True, "rule_ids": [], "violations": [], "contains_phi": False},
+    }
+    capped = combine_evaluation("clinical", failing, iteration=MAX_DRAFT_ITERATIONS, capped=True)
+    assert capped["overall_pass"] is False
+    assert capped["needs_human_review"] is True
+    assert capped["iteration"] == MAX_DRAFT_ITERATIONS
+    assert "please improve the draft" not in capped["feedback_for_generator"].lower()
+
+    still_looping = combine_evaluation("clinical", failing, iteration=1, capped=False)
+    assert still_looping["needs_human_review"] is False
+
+
+def test_graph_cap_persists_last_draft_and_needs_human_review(rfp_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Failing department is revised until the cap; last draft stays in Part 3 handoff."""
+    clinical_drafts: list[str] = []
+
+    def stub_generate(department_id: str, handoff, *, feedback=None):
+        if department_id != "clinical":
+            return generate_section(department_id, handoff, feedback=feedback)
+        draft = (
+            "Clinical operations internal note for scheduling only. "
+            "This text discusses calendar holds, meeting rooms, and invoices. "
+            "It does not restate intake volume or delivery facts. "
+            f"Control token round-{len(clinical_drafts) + 1} is recorded for the cap test. "
+            "Identifiers do not appear here. Quote currency is not discussed in this section."
+        )
+        clinical_drafts.append(draft)
+        return draft
+
+    monkeypatch.setattr("data.pipelines.rfp_draft.nodes.generate_section", stub_generate)
+    _seed_complete(rfp_db, "cap-ticket", MERIDIAN_HANDOFF)
+    run_rfp_draft("cap-ticket")
+
+    assert len(clinical_drafts) == MAX_DRAFT_ITERATIONS
+    last_draft = clinical_drafts[-1]
+    with Session(rfp_db) as session:
+        ticket = session.get(RfpTicket, "cap-ticket")
+        assert ticket is not None
+        assert ticket.status == "needs_human_review"
+        assert ticket.status != "discarded"
+        assert ticket.handoff_json is not None
+        assert ticket.part2_handoff_json is not None
+        by_dept = {row["department_id"]: row for row in ticket.part2_handoff_json["departments"]}
+        assert set(by_dept) == {"revenue", "clinical", "compliance"}
+
+        clinical = by_dept["clinical"]
+        assert clinical["draft_content"] == last_draft
+        assert clinical["needs_human_review"] is True
+        assert clinical["evaluation_results"]["overall_pass"] is False
+        assert clinical["evaluation_results"]["needs_human_review"] is True
+        assert clinical["evaluation_results"]["iteration"] == MAX_DRAFT_ITERATIONS
+        assert clinical["evaluation_results"]["relevance"]["missing_aspects"]
+
+        for dept in ("revenue", "compliance"):
+            assert by_dept[dept]["draft_content"]
+            assert by_dept[dept]["evaluation_results"]["iteration"] >= 1
+
+        row = session.exec(
+            select(RfpDepartmentSection).where(
+                RfpDepartmentSection.ticket_id == "cap-ticket",
+                RfpDepartmentSection.department_id == "clinical",
+            )
+        ).first()
+        assert row is not None
+        assert row.draft_content == last_draft
+        assert row.evaluation_results["iteration"] == MAX_DRAFT_ITERATIONS
+        assert row.approval_status is None
+

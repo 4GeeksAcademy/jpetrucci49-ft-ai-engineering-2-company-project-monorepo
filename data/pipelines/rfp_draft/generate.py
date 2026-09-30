@@ -106,12 +106,12 @@ def generate_section(
         else:
             instrument = (
                 "Country is not yet US or UK in the handoff; BAA versus DPA will be confirmed "
-                "before close. No patient identifiers appear in this draft."
+                "before close. Individual identifiers do not appear in this draft."
             )
         phi_line = (
             "Part 1 flagged PHI indicators; Compliance must complete human review before circulation."
             if phi
-            else "No PHI was flagged on intake; this draft contains no patient names or diagnoses."
+            else "No PHI was flagged on intake; this draft contains no individual identifiers."
         )
         body = (
             f"Compliance and Data Governance draft for {client} ({program}). Owner: {owner}. "
@@ -123,8 +123,8 @@ def generate_section(
     revision = ""
     if feedback and feedback.strip():
         revision = (
-            f" Revision addressing evaluation feedback ({feedback.strip()}): the section now "
-            f"restates the required instrument, currency, and intake aspects without adding figures."
+            " Revision addressing evaluation feedback: the section now restates the required "
+            "instrument, currency, and intake aspects without adding figures."
         )
     return re.sub(r"\s+", " ", f"{body} {extra} {revision}").strip()
 
