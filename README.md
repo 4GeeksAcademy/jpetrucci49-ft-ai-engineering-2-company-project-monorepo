@@ -101,6 +101,7 @@ See [`services/api/README.md`](services/api/README.md#password-recovery-and-chan
 | Supply movements | http://localhost:3001/inventory/orders | Read-only delivery and consumption history (M5.5) |
 | Talent pipeline tracker | http://localhost:3002 | Recruitment pipeline (M3) |
 | HealthCore API | http://localhost:8000 | FastAPI — auth, incidents, suppliers, inventory (M5–M11, M5.5) |
+| HealthCore MCP | http://localhost:8100/mcp | Streamable HTTP MCP server (started by `npm run dev`) |
 | API docs | http://localhost:8000/docs | OpenAPI (Swagger) |
 
 ### Individual apps
@@ -111,6 +112,7 @@ npm run dev:backoffice   # port 3001
 npm run dev:tracker      # port 3002
 npm run dev:hub          # port 4173 (links only)
 npm run dev:api          # port 8000 (FastAPI)
+npm run dev:mcp          # port 8100 (also started by `npm run dev`)
 npm run dev:uis          # frontends only (no hub or API)
 ```
 

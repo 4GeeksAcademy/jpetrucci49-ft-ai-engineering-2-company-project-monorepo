@@ -1,5 +1,7 @@
 import type { OperationsSnapshot } from "@/lib/operations";
 
+import { RfpTicketFeed } from "./RfpTicketFeed";
+
 interface OperationsDashboardProps {
   data: OperationsSnapshot;
 }
@@ -15,9 +17,11 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
         <h2 className="text-2xl font-semibold text-slate-900">Welcome, HealthCore Digital</h2>
         <p className="mt-2 text-slate-600">
           Internal operations snapshot for Tom Callahan (Billing), Dr. Marcus Reid (Clinical Ops), and Diane
-          Foster (People). Sample data as of {data.asOfDate}.
+          Foster (People).         Sample data as of {data.asOfDate}.
         </p>
       </section>
+
+      <RfpTicketFeed />
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="billing-heading">
         <h3 id="billing-heading" className="text-lg font-semibold text-slate-900">

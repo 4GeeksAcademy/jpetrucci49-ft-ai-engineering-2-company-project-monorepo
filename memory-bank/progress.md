@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: RFP approval and completion Part 3 (9.7)_
+_Last updated: SSE ticket notices (10.5)_
 
 ## Completed
 
@@ -282,6 +282,7 @@ _Last updated: RFP approval and completion Part 3 (9.7)_
 - [x] `inventory_query` reads; `inventory_mutate` always errors `inventory_read_only`
 - [x] Desk agent `lookup_incident` / `lookup_inventory` go through `langchain-mcp-adapters` (no manager import in `agent/`)
 - [x] Tests: `tests/pipelines/test_agent_graph.py` (routing + `agent_incidents_via_mcp` + `mcp_inventory_mutate_rejected`); `test_rag.py` still required
+- [x] `npm run dev` starts the MCP server on port 8100 alongside the other apps
 
 ### Desk-agent memory (8.5)
 
@@ -326,6 +327,14 @@ _Last updated: RFP approval and completion Part 3 (9.7)_
 - [x] Statuses `waiting_for_approval` and `done`; `final_document_json` after all three owners approve
 - [x] `POST /rfp/tickets/{id}/approvals` 202 and `POST .../approvals/{department_id}`; backoffice `/rfp` decisions
 - [x] Tests: `tests/pipelines/test_rfp_approval.py`; smoke: `scripts/run_rfp_approval_e2e.py`
+
+### SSE ticket notices (10.5)
+
+- [x] Spec: `specs/10.5_SSE_SPECS.md`; context: `context/10.5_CONTEXT.md`
+- [x] `GET /rfp/events` pushes `agent_status_changed` after `create_ticket` commits; in-process queue per listener
+- [x] `GET /rfp/tickets` returns the newest 20 (`ticket_id`, `status` only) so a missed event is recovered on reconnect
+- [x] Backoffice `/` RFP tickets block streams `/api/rfp/events` with `authFetch` and dedupes on `ticket_id`
+- [x] Tests: `tests/pipelines/test_rfp_sse.py`
 
 ## In progress
 
