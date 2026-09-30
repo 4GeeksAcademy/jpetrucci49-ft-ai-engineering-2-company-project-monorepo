@@ -50,7 +50,7 @@ Telemetry capture (M6.5) posts batches to the FastAPI stub. Copy `NEXT_PUBLIC_TE
 | `/inventory/orders` | M5.5 | Read-only supply movements |
 | `/reporting` | M6.5 | Monthly Clinic Supply Performance Report (Dr. Okonkwo / Claire) |
 | `/telemetry` | M6.5 | Engineering telemetry health (events, errors, latency, login failures) |
-| `/rfp` | 9.5 / 9.6 | Institutional RFP intake, department routing, and proposal draft generation |
+| `/rfp` | 9.5 / 9.6 / 9.7 | Institutional RFP intake, proposal drafts, and department approval |
 
 ## Testing password recovery (M9)
 

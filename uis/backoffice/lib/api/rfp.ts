@@ -20,7 +20,9 @@ export type RfpTicketStatus =
   | "intake_complete"
   | "drafting"
   | "under_evaluation"
-  | "needs_human_review";
+  | "needs_human_review"
+  | "waiting_for_approval"
+  | "done";
 
 export interface RfpEvaluationResult {
   department_id?: string;
@@ -31,6 +33,13 @@ export interface RfpEvaluationResult {
   feedback_for_generator?: string;
   needs_human_review?: boolean;
   iteration?: number;
+  arbitration?: Array<{
+    trigger_id?: string;
+    arbiter?: string;
+    action?: string;
+    instruction?: string;
+    affected_departments?: string[];
+  }>;
 }
 
 export interface RfpMetadata {
@@ -78,6 +87,18 @@ export interface RfpTicket {
       needs_human_review: boolean;
     }>;
   } | null;
+  final_document_json: {
+    ticket_id: string;
+    currency: string;
+    generated_at: string;
+    sections: Array<{
+      department_id: string;
+      owner: string;
+      approver: string;
+      approved_at: string;
+      draft_content: string;
+    }>;
+  } | null;
 }
 
 export interface RfpSection {
@@ -87,6 +108,10 @@ export interface RfpSection {
   open_questions: string[];
   draft_content: string | null;
   evaluation_results: RfpEvaluationResult | null;
+  approval_status: string | null;
+  approver: string | null;
+  approved_at: string | null;
+  blocking_triggers: string[];
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -163,4 +188,47 @@ export async function startRfpDraft(ticketId: string): Promise<{ ticket_id: stri
   }
   const status = typeof payload.status === "string" ? (payload.status as RfpTicketStatus) : "drafting";
   return { ticket_id: payload.ticket_id, status };
+}
+
+export async function startRfpApprovals(ticketId: string): Promise<{ ticket_id: string; status: RfpTicketStatus }> {
+  let response: Response;
+  try {
+    response = await authFetch(`/api/rfp/tickets/${ticketId}/approvals`, { method: "POST" });
+  } catch (error) {
+    throw new RfpApiError(toUserFacingMessage(error, NETWORK_ERROR), 0);
+  }
+  if (!response.ok) {
+    const raw = await parseApiError(response);
+    throw new RfpApiError(raw || "Unable to start department approval.", response.status);
+  }
+  const payload = (await readJson(response)) as { ticket_id?: unknown; status?: unknown };
+  if (typeof payload.ticket_id !== "string" || !payload.ticket_id) {
+    throw new RfpApiError(INVALID_RESPONSE, response.status);
+  }
+  const status =
+    typeof payload.status === "string" ? (payload.status as RfpTicketStatus) : "waiting_for_approval";
+  return { ticket_id: payload.ticket_id, status };
+}
+
+export async function submitRfpDecision(
+  ticketId: string,
+  departmentId: string,
+  decision: "approve" | "request_changes" | "reject",
+  comment?: string,
+): Promise<RfpTicket> {
+  let response: Response;
+  try {
+    response = await authFetch(`/api/rfp/tickets/${ticketId}/approvals/${departmentId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, comment: comment ?? null }),
+    });
+  } catch (error) {
+    throw new RfpApiError(toUserFacingMessage(error, NETWORK_ERROR), 0);
+  }
+  if (!response.ok) {
+    const raw = await parseApiError(response);
+    throw new RfpApiError(raw || "Unable to record that decision.", response.status);
+  }
+  return (await readJson(response)) as RfpTicket;
 }

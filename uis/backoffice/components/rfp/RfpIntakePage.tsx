@@ -9,7 +9,9 @@ import {
   getRfpSections,
   getRfpTicket,
   RfpApiError,
+  startRfpApprovals,
   startRfpDraft,
+  submitRfpDecision,
   uploadRfpPdf,
   type RfpEvaluationResult,
   type RfpSection,
@@ -32,12 +34,22 @@ function shouldPoll(ticket: RfpTicket): boolean {
   if (ticket.status === "analyzing") {
     return true;
   }
-  if (ticket.error_code === "draft_pipeline_error") {
+  if (ticket.error_code === "draft_pipeline_error" || ticket.error_code === "approval_pipeline_error") {
     return false;
+  }
+  if (ticket.status === "waiting_for_approval") {
+    return true;
   }
   return (
     (ticket.status === "drafting" || ticket.status === "under_evaluation") &&
     ticket.part2_handoff_json == null
+  );
+}
+
+function canStartApproval(ticket: RfpTicket): boolean {
+  return (
+    ticket.part2_handoff_json != null &&
+    (ticket.status === "under_evaluation" || ticket.status === "needs_human_review")
   );
 }
 
@@ -65,6 +77,14 @@ function statusLabel(ticket: RfpTicket): string {
   }
   if (ticket.status === "needs_human_review") {
     return "Needs human review";
+  }
+  if (ticket.status === "waiting_for_approval") {
+    return ticket.error_code === "approval_pipeline_error"
+      ? "Approval failed — review the ticket and retry"
+      : "Waiting for department approval";
+  }
+  if (ticket.status === "done") {
+    return "Approved";
   }
   if (ticket.status === "intake_complete") {
     return ticket.phi_detected ? "Intake complete — PHI flagged for Compliance" : "Intake complete";
@@ -101,6 +121,76 @@ function EvalSummary({ evaluation }: { evaluation: RfpEvaluationResult | null })
   );
 }
 
+function ApprovalActions({
+  section,
+  comment,
+  busy,
+  onComment,
+  onDecision,
+}: {
+  section: RfpSection;
+  comment: string;
+  busy: boolean;
+  onComment: (value: string) => void;
+  onDecision: (decision: "approve" | "request_changes" | "reject") => void;
+}) {
+  const triggers = section.blocking_triggers ?? [];
+  const notes = section.evaluation_results?.arbitration ?? [];
+  return (
+    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+      {triggers.length > 0 ? (
+        <ul className="space-y-1 text-xs text-amber-900">
+          {triggers.map((triggerId) => {
+            const note = notes.find((item) => item.trigger_id === triggerId);
+            return (
+              <li key={triggerId}>
+                <span className="font-semibold">{triggerId}</span>
+                {note?.arbiter ? ` · ${note.arbiter}` : ""}
+                {note?.instruction ? ` — ${note.instruction}` : ""}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      <label className="block text-xs text-slate-600">
+        Comment
+        <textarea
+          value={comment}
+          onChange={(event) => onComment(event.target.value)}
+          rows={2}
+          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-900"
+        />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onDecision("approve")}
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onDecision("request_changes")}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-60"
+        >
+          Request changes
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onDecision("reject")}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-60"
+        >
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RfpIntakePage() {
   const chosenFile = useRef<File | null>(null);
   const [hasFile, setHasFile] = useState(false);
@@ -109,6 +199,9 @@ export function RfpIntakePage() {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isStartingApproval, setIsStartingApproval] = useState(false);
+  const [decisionDept, setDecisionDept] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, string>>({});
   const ticketId = ticket?.ticket_id ?? null;
   const pollTicket = ticket != null && shouldPoll(ticket);
 
@@ -129,7 +222,9 @@ export function RfpIntakePage() {
         const readyForSections =
           next.status === "intake_complete" ||
           next.part2_handoff_json != null ||
-          next.status === "needs_human_review";
+          next.status === "needs_human_review" ||
+          next.status === "waiting_for_approval" ||
+          next.status === "done";
         if (readyForSections) {
           setSections(await getRfpSections(activeTicketId));
         }
@@ -180,6 +275,7 @@ export function RfpIntakePage() {
         metadata: null,
         handoff_json: null,
         part2_handoff_json: null,
+        final_document_json: null,
       });
     } catch (caught) {
       setError(caught instanceof RfpApiError ? caught.message : "Unable to upload the RFP.");
@@ -206,6 +302,46 @@ export function RfpIntakePage() {
       setError(caught instanceof RfpApiError ? caught.message : "Unable to start draft generation.");
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  async function onStartApproval() {
+    if (!ticket) {
+      return;
+    }
+    setIsStartingApproval(true);
+    setError(null);
+    try {
+      const created = await startRfpApprovals(ticket.ticket_id);
+      const next = await getRfpTicket(created.ticket_id);
+      setTicket(next);
+      setSections(await getRfpSections(created.ticket_id));
+    } catch (caught) {
+      setError(caught instanceof RfpApiError ? caught.message : "Unable to start department approval.");
+    } finally {
+      setIsStartingApproval(false);
+    }
+  }
+
+  async function onDecision(departmentId: string, decision: "approve" | "request_changes" | "reject") {
+    if (!ticket) {
+      return;
+    }
+    const comment = (comments[departmentId] ?? "").trim();
+    if ((decision === "request_changes" || decision === "reject") && !comment) {
+      setError("A comment is required to request changes or reject.");
+      return;
+    }
+    setDecisionDept(departmentId);
+    setError(null);
+    try {
+      const next = await submitRfpDecision(ticket.ticket_id, departmentId, decision, comment || undefined);
+      setTicket(next);
+      setSections(await getRfpSections(ticket.ticket_id));
+    } catch (caught) {
+      setError(caught instanceof RfpApiError ? caught.message : "Unable to record that decision.");
+    } finally {
+      setDecisionDept(null);
     }
   }
 
@@ -254,7 +390,10 @@ export function RfpIntakePage() {
             {ticket.status === "analyzing" ? (
               <LoadingState label="Conversion and department analysis running…" layout="inline" />
             ) : null}
-            {shouldPoll(ticket) && ticket.status !== "analyzing" ? (
+            {shouldPoll(ticket) && ticket.status === "waiting_for_approval" ? (
+              <LoadingState label="Waiting for department decisions…" layout="inline" />
+            ) : null}
+            {shouldPoll(ticket) && ticket.status !== "analyzing" && ticket.status !== "waiting_for_approval" ? (
               <LoadingState label="Generating and evaluating proposal drafts…" layout="inline" />
             ) : null}
           </div>
@@ -269,7 +408,11 @@ export function RfpIntakePage() {
                 <dt className="text-slate-500">Country / currency</dt>
                 <dd className="text-slate-900">
                   {ticket.metadata.client_country}
-                  {ticket.metadata.currency ? ` · ${ticket.metadata.currency}` : ""}
+                  {ticket.final_document_json?.currency
+                    ? ` · ${ticket.final_document_json.currency}`
+                    : ticket.metadata.currency
+                      ? ` · ${ticket.metadata.currency}`
+                      : ""}
                 </dd>
               </div>
               <div>
@@ -285,6 +428,17 @@ export function RfpIntakePage() {
 
           {ticket.handoff_json?.synthesizer_summary ? (
             <p className="text-sm text-slate-800">{ticket.handoff_json.synthesizer_summary}</p>
+          ) : null}
+
+          {canStartApproval(ticket) ? (
+            <button
+              type="button"
+              onClick={() => void onStartApproval()}
+              disabled={isStartingApproval}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isStartingApproval ? "Starting…" : "Start department approval"}
+            </button>
           ) : null}
 
           {canStartDraft(ticket) ? (
@@ -331,6 +485,22 @@ export function RfpIntakePage() {
                       <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{section.draft_content}</p>
                       <EvalSummary evaluation={section.evaluation_results} />
                     </div>
+                  ) : null}
+                  {section.approval_status === "approved" ? (
+                    <p className="mt-3 text-xs font-medium text-emerald-800">
+                      Approved by {section.approver}
+                    </p>
+                  ) : null}
+                  {ticket.status === "waiting_for_approval" && section.approval_status !== "approved" ? (
+                    <ApprovalActions
+                      section={section}
+                      comment={comments[section.department_id] ?? ""}
+                      busy={decisionDept === section.department_id}
+                      onComment={(value) =>
+                        setComments((current) => ({ ...current, [section.department_id]: value }))
+                      }
+                      onDecision={(decision) => void onDecision(section.department_id, decision)}
+                    />
                   ) : null}
                 </article>
               ))}

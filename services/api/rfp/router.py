@@ -12,7 +12,7 @@ from auth.dependencies import get_current_user
 from auth.models import UserPublic
 from inventory.database import get_db
 from rfp import service as rfp_service
-from rfp.schemas import TicketCreated, TicketOut, TicketSectionsOut
+from rfp.schemas import ApprovalDecisionIn, TicketCreated, TicketOut, TicketSectionsOut
 
 router = APIRouter(prefix="/rfp", tags=["rfp"])
 
@@ -70,6 +70,51 @@ def start_draft(
         status_code=status.HTTP_202_ACCEPTED,
         content=created.model_dump(),
     )
+
+
+@router.post("/tickets/{ticket_id}/approvals", status_code=status.HTTP_202_ACCEPTED)
+def start_approvals(ticket_id: str, session: DbSession, _: CurrentUser) -> JSONResponse:
+    try:
+        created: TicketCreated = rfp_service.start_approvals(session, ticket_id)
+    except rfp_service.RfpTicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Ticket not found.") from exc
+    except rfp_service.RfpTicketConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=created.model_dump())
+
+
+@router.post("/tickets/{ticket_id}/approvals/{department_id}", response_model=TicketOut)
+def submit_approval(
+    ticket_id: str,
+    department_id: str,
+    body: ApprovalDecisionIn,
+    session: DbSession,
+    _: CurrentUser,
+) -> TicketOut:
+    from data.pipelines.rfp_approval.decisions import ApprovalBlocked, ApprovalNotWaiting, InvalidDecision
+    from data.pipelines.rfp_approval.graph import InvalidDepartment
+
+    try:
+        return rfp_service.submit_approval(
+            session,
+            ticket_id,
+            department_id,
+            decision=body.decision,
+            comment=body.comment,
+        )
+    except rfp_service.RfpTicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Ticket not found.") from exc
+    except InvalidDepartment as exc:
+        raise HTTPException(status_code=400, detail="Unknown department.") from exc
+    except InvalidDecision as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ApprovalBlocked as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Approve refused while {exc.trigger_id} is blocking.",
+        ) from exc
+    except ApprovalNotWaiting as exc:
+        raise HTTPException(status_code=409, detail="That department is not waiting for a decision.") from exc
 
 
 @router.get("/tickets/{ticket_id}", response_model=TicketOut)
