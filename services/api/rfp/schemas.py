@@ -55,6 +55,7 @@ class DepartmentSectionOut(BaseModel):
 class ApprovalDecisionIn(BaseModel):
     decision: str
     comment: str | None = None
+    draft_content: str | None = None
 
 
 class TicketSectionsOut(BaseModel):

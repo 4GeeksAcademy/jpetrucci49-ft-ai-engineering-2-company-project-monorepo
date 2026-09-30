@@ -121,6 +121,35 @@ function EvalSummary({ evaluation }: { evaluation: RfpEvaluationResult | null })
   );
 }
 
+function DecisionStatus({ section }: { section: RfpSection }) {
+  const record = section.evaluation_results?.last_decision;
+  if (section.approval_status === "changes_requested") {
+    return (
+      <div className="mt-3 rounded-md bg-amber-50 px-2 py-2 text-xs text-amber-950">
+        <p className="font-semibold">
+          {record?.capped ? "Changes requested — revision limit reached" : "Changes requested"}
+        </p>
+        {record?.comment ? <p className="mt-1">“{record.comment}”</p> : null}
+        <p className="mt-1">
+          {record?.capped
+            ? "This section stays unapproved. The proposal below is the last saved version."
+            : "The proposal below is saved and still open for review."}
+        </p>
+      </div>
+    );
+  }
+  if (section.approval_status === "rejected") {
+    return (
+      <div className="mt-3 rounded-md bg-slate-100 px-2 py-2 text-xs text-slate-800">
+        <p className="font-semibold">Rejected</p>
+        {record?.comment ? <p className="mt-1">“{record.comment}”</p> : null}
+        <p className="mt-1">This section stays open. Edit the proposal and request changes if it should be revised.</p>
+      </div>
+    );
+  }
+  return null;
+}
+
 function ApprovalActions({
   section,
   comment,
@@ -136,6 +165,10 @@ function ApprovalActions({
 }) {
   const triggers = section.blocking_triggers ?? [];
   const notes = section.evaluation_results?.arbitration ?? [];
+  const commentRequired = comment.trim().length === 0;
+  const lockedAction =
+    "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400";
+  const openAction = "border-slate-300 bg-white text-slate-800 hover:bg-slate-50";
   return (
     <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
       {triggers.length > 0 ? (
@@ -158,31 +191,39 @@ function ApprovalActions({
           value={comment}
           onChange={(event) => onComment(event.target.value)}
           rows={2}
+          aria-describedby={`approval-comment-hint-${section.department_id}`}
           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-900"
         />
       </label>
+      <p id={`approval-comment-hint-${section.department_id}`} className="text-xs text-slate-500">
+        {commentRequired
+          ? "Request changes and Reject stay unavailable until a comment is added."
+          : "Request changes saves the proposal text above with this comment."}
+      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={() => onDecision("approve")}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           Approve
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || commentRequired}
+          aria-disabled={busy || commentRequired}
           onClick={() => onDecision("request_changes")}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-60"
+          className={`rounded-md border px-3 py-1.5 text-xs font-medium ${commentRequired || busy ? lockedAction : openAction}`}
         >
           Request changes
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || commentRequired}
+          aria-disabled={busy || commentRequired}
           onClick={() => onDecision("reject")}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-60"
+          className={`rounded-md border px-3 py-1.5 text-xs font-medium ${commentRequired || busy ? lockedAction : openAction}`}
         >
           Reject
         </button>
@@ -202,6 +243,7 @@ export function RfpIntakePage() {
   const [isStartingApproval, setIsStartingApproval] = useState(false);
   const [decisionDept, setDecisionDept] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [draftEdits, setDraftEdits] = useState<Record<string, string>>({});
   const [canRecordDecision, setCanRecordDecision] = useState(false);
   const ticketId = ticket?.ticket_id ?? null;
   const pollTicket = ticket != null && shouldPoll(ticket);
@@ -291,6 +333,7 @@ export function RfpIntakePage() {
     setTicket(null);
     setSections([]);
     setComments({});
+    setDraftEdits({});
     try {
       const created = await uploadRfpPdf(pdf);
       setTicket({
@@ -366,10 +409,23 @@ export function RfpIntakePage() {
     setDecisionDept(departmentId);
     setError(null);
     try {
-      const next = await submitRfpDecision(ticket.ticket_id, departmentId, decision, comment || undefined);
+      const currentDraft = sections.find((item) => item.department_id === departmentId)?.draft_content ?? "";
+      const edited = (draftEdits[key] ?? currentDraft).trim();
+      const next = await submitRfpDecision(
+        ticket.ticket_id,
+        departmentId,
+        decision,
+        comment || undefined,
+        decision === "approve" ? undefined : edited || undefined,
+      );
       setTicket(next);
       setSections(await getRfpSections(ticket.ticket_id));
       setComments((current) => ({ ...current, [key]: "" }));
+      setDraftEdits((current) => {
+        const remaining = { ...current };
+        delete remaining[key];
+        return remaining;
+      });
     } catch (caught) {
       setError(caught instanceof RfpApiError ? caught.message : "Unable to record that decision.");
     } finally {
@@ -508,7 +564,27 @@ export function RfpIntakePage() {
                       </ul>
                     </div>
                   ) : null}
-                  {section.draft_content ? (
+                  <DecisionStatus section={section} />
+                  {ticket.status === "waiting_for_approval" && section.approval_status !== "approved" && canRecordDecision ? (
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <label className="block text-xs font-medium uppercase text-slate-500">
+                        Proposal
+                        <textarea
+                          value={draftEdits[commentKey(section.department_id)] ?? section.draft_content ?? ""}
+                          onChange={(event) =>
+                            setDraftEdits((current) => ({
+                              ...current,
+                              [commentKey(section.department_id)]: event.target.value,
+                            }))
+                          }
+                          rows={8}
+                          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm font-normal normal-case text-slate-900"
+                        />
+                      </label>
+                      <p className="mt-1 text-xs text-slate-500">Edit the proposal here. Request changes saves this text.</p>
+                      <EvalSummary evaluation={section.evaluation_results} />
+                    </div>
+                  ) : section.draft_content ? (
                     <div className="mt-3 border-t border-slate-100 pt-3">
                       <p className="text-xs font-medium uppercase text-slate-500">Draft</p>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{section.draft_content}</p>

@@ -186,6 +186,27 @@ def test_resume_clinical_leaves_revenue_interrupted(approval_db) -> None:
     assert _ticket(approval_db, ticket_id).final_document_json is None
 
 
+def test_request_changes_saves_edited_proposal_and_comment(approval_db) -> None:
+    ticket_id = "edited-draft"
+    _seed(approval_db, ticket_id, CLEAN_DRAFTS)
+    start_approvals(ticket_id)
+    revised = "Revenue proposal revised by the manager for Meridian Manufacturing in USD."
+    resume_approval(
+        ticket_id,
+        "revenue",
+        "request_changes",
+        "Use this wording.",
+        draft_content=revised,
+    )
+    row = _section(approval_db, ticket_id, "revenue")
+    assert row.draft_content == revised
+    assert row.approval_status == "changes_requested"
+    recorded = (row.evaluation_results or {}).get("last_decision") or {}
+    assert recorded["comment"] == "Use this wording."
+    assert recorded["capped"] is False
+    assert _ticket(approval_db, ticket_id).status == "waiting_for_approval"
+
+
 def test_third_request_changes_caps(approval_db, tmp_path: Path) -> None:
     ticket_id = "iteration-cap"
     _seed(approval_db, ticket_id, CLEAN_DRAFTS)

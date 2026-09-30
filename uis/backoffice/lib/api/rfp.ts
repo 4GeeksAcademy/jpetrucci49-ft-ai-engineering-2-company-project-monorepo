@@ -33,6 +33,7 @@ export interface RfpEvaluationResult {
   feedback_for_generator?: string;
   needs_human_review?: boolean;
   iteration?: number;
+  last_decision?: { decision?: string; comment?: string; capped?: boolean };
   arbitration?: Array<{
     trigger_id?: string;
     arbiter?: string;
@@ -215,13 +216,18 @@ export async function submitRfpDecision(
   departmentId: string,
   decision: "approve" | "request_changes" | "reject",
   comment?: string,
+  draftContent?: string,
 ): Promise<RfpTicket> {
   let response: Response;
   try {
     response = await authFetch(`/api/rfp/tickets/${ticketId}/approvals/${departmentId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision, comment: comment ?? null }),
+      body: JSON.stringify({
+        decision,
+        comment: comment ?? null,
+        draft_content: draftContent ?? null,
+      }),
     });
   } catch (error) {
     throw new RfpApiError(toUserFacingMessage(error, NETWORK_ERROR), 0);

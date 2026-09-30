@@ -113,6 +113,7 @@ def submit_approval(
             decision=body.decision,
             comment=body.comment,
             approver=_signed_in_approver(user),
+            draft_content=body.draft_content,
         )
     except rfp_service.RfpTicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Ticket not found.") from exc

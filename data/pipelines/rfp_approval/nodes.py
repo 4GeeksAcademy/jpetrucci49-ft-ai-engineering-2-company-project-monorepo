@@ -39,19 +39,37 @@ def approval_payload(state: BranchState) -> dict[str, Any]:
     }
 
 
-def _persist_branch(state: BranchState, *, approval_status: str | None, approver: str | None, approved_at: Any) -> None:
-    evaluation = dict(state.get("evaluation_results") or {})
+def _persist_branch(
+    state: BranchState,
+    *,
+    approval_status: str | None,
+    approver: str | None,
+    approved_at: Any,
+    draft_content: str | None = None,
+    evaluation_results: dict[str, Any] | None = None,
+) -> None:
+    evaluation = dict(evaluation_results if evaluation_results is not None else (state.get("evaluation_results") or {}))
     if state.get("arbitration"):
         evaluation = {**evaluation, "arbitration": list(state.get("arbitration") or [])}
     save_section(
         state["ticket_id"],
         state["department_id"],
-        draft_content=state.get("draft_content") or "",
+        draft_content=state.get("draft_content") if draft_content is None else draft_content,
         evaluation_results=evaluation,
         approval_status=approval_status,
         approver=approver,
         approved_at=approved_at,
     )
+
+
+def _with_decision(state: BranchState, kind: str, comment: str, *, capped: bool) -> dict[str, Any]:
+    evaluation = dict(state.get("evaluation_results") or {})
+    evaluation["last_decision"] = {"decision": kind, "comment": comment, "capped": capped}
+    return evaluation
+
+
+def _edited_draft(state: BranchState) -> str:
+    return str((state.get("pending_decision") or {}).get("draft_content") or "").strip()
 
 
 def guard_node(state: BranchState) -> dict[str, Any]:
@@ -129,24 +147,49 @@ def apply_node(state: BranchState) -> dict[str, Any]:
             "route": "done",
             "trace": [event("resume_approval", dept, "approve", "approved")],
         }
+    comment = str(decision.get("comment") or "")
+    edited = _edited_draft(state)
     if kind == "reject":
-        _persist_branch(state, approval_status="rejected", approver=None, approved_at=None)
+        evaluation = _with_decision(state, "reject", comment, capped=False)
+        draft = edited or (state.get("draft_content") or "")
+        _persist_branch(
+            state,
+            approval_status="rejected",
+            approver=None,
+            approved_at=None,
+            draft_content=draft,
+            evaluation_results=evaluation,
+        )
         return {
+            "draft_content": draft,
+            "evaluation_results": evaluation,
             "approval_status": "rejected",
             "route": "mark_wait",
             "trace": [event("resume_approval", dept, "reject", "rejected")],
         }
     nxt = int(state.get("iteration") or 0) + 1
     if nxt >= MAX_APPROVAL_ITERATIONS:
-        _persist_branch(state, approval_status="changes_requested", approver=None, approved_at=None)
+        evaluation = _with_decision(state, "request_changes", comment, capped=True)
+        draft = edited or (state.get("draft_content") or "")
+        _persist_branch(
+            state,
+            approval_status="changes_requested",
+            approver=None,
+            approved_at=None,
+            draft_content=draft,
+            evaluation_results=evaluation,
+        )
         return {
             "iteration": nxt,
+            "draft_content": draft,
+            "evaluation_results": evaluation,
             "approval_status": "changes_requested",
             "route": "mark_wait",
             "trace": [event("resume_approval", dept, "request_changes", "approval_iteration_cap")],
         }
     return {
         "iteration": nxt,
+        "evaluation_results": _with_decision(state, "request_changes", comment, capped=False),
         "approval_status": "changes_requested",
         "route": "revise",
         "trace": [event("resume_approval", dept, "request_changes", "revise")],
@@ -158,14 +201,20 @@ def route_after_apply(state: BranchState) -> str:
 
 
 def revise_node(state: BranchState) -> dict[str, Any]:
-    comment = str((state.get("pending_decision") or {}).get("comment") or "")
-    draft = generate_section(state["department_id"], state.get("handoff") or {}, feedback=comment)
+    edited = _edited_draft(state)
+    if edited:
+        draft = edited
+        summary = "draft_edited"
+    else:
+        comment = str((state.get("pending_decision") or {}).get("comment") or "")
+        draft = generate_section(state["department_id"], state.get("handoff") or {}, feedback=comment)
+        summary = "draft_updated"
     drafts = dict(state.get("drafts") or {})
     drafts[state["department_id"]] = draft
     return {
         "draft_content": draft,
         "drafts": drafts,
         "approval_status": "changes_requested",
-        "trace": [event("revise", state["department_id"], "request_changes", "draft_updated")],
+        "trace": [event("revise", state["department_id"], "request_changes", summary)],
     }
 

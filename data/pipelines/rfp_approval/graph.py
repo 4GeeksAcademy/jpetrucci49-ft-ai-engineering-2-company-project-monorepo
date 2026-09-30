@@ -244,6 +244,7 @@ def resume_approval(
     decision: str,
     comment: str | None,
     approver: str | None = None,
+    draft_content: str | None = None,
 ) -> None:
     """Resume one department thread, then join. Other threads stay put."""
     if department_id not in DEPARTMENT_OWNERS:
@@ -255,6 +256,9 @@ def resume_approval(
     named = (approver or "").strip()
     if named:
         parsed["approver"] = named
+    edited = (draft_content or "").strip()
+    if edited:
+        parsed["draft_content"] = edited
     blocking = list(payload.get("blocking_triggers") or [])
     if parsed["decision"] == "approve" and blocking:
         raise ApprovalBlocked(str(blocking[0]))
