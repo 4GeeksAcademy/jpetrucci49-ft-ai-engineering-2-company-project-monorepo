@@ -189,12 +189,22 @@ export function RfpIntakePage() {
             </dl>
           ) : null}
 
+          {ticket.status === "intake_complete" && ticket.handoff_json?.synthesizer_summary ? (
+            <p className="text-sm text-slate-800">{ticket.handoff_json.synthesizer_summary}</p>
+          ) : null}
+
           {sections.length > 0 && ticket.status === "intake_complete" ? (
             <div className="grid gap-3 md:grid-cols-3">
               {sections.map((section) => (
                 <article key={section.department_id} className="rounded-md border border-slate-200 p-3">
                   <h3 className="text-sm font-semibold text-slate-900">{departmentLabel(section.department_id)}</h3>
-                  <p className="text-xs text-slate-500">Department review</p>
+                  {section.owner ? (
+                    <p className="text-xs text-slate-600">
+                      Contact: <span className="font-medium text-slate-800">{section.owner}</span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500">Department review</p>
+                  )}
                   <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-800">
                     {section.key_aspects.map((aspect) => (
                       <li key={aspect}>{aspect}</li>
