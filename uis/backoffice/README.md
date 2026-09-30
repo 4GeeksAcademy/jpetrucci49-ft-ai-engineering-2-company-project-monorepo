@@ -37,7 +37,7 @@ Telemetry capture (M6.5) posts batches to the FastAPI stub. Copy `NEXT_PUBLIC_TE
 | `/login`, `/register` | M8 | Sign in and registration |
 | `/forgot-password`, `/reset-password` | M9 | Password recovery (public) |
 | `/account/profile`, `/account/change-password` | M8/M9 | Profile and password change (authenticated) |
-| `/` | M2 | Operations dashboard (billing, clinical, CME) |
+| `/` | M2 / 10.5 | Operations dashboard (billing, clinical, CME) and live RFP ticket notices |
 | `/utilities` | M2 | Utility function manual runner |
 | `/incidents` | M5 | Patient incident CSV upload and aggregate analysis |
 | `/incidents/register` | M11 | Register a new incident (PHI warning on description) |
@@ -63,6 +63,15 @@ Telemetry capture (M6.5) posts batches to the FastAPI stub. Copy `NEXT_PUBLIC_TE
 
 API-level curl tests: [`services/api/README.md`](../../services/api/README.md#testing). Full UI + API checklist: root [`README.md`](../../README.md#testing-password-recovery-and-change-m9).
 
+## RFP ticket notices (10.5)
+
+The operations dashboard at `/` lists the newest RFP tickets and listens for `rfp_ticket_created` through `/api/rfp/events`. The browser never calls port 8000.
+
+1. Sign in at http://localhost:3001/login and open http://localhost:3001/.
+2. Stop the API process. The **RFP tickets** block shows **Reconnecting…**. Rows already listed stay on screen.
+3. Start the API. From a second signed-in session, upload a PDF at http://localhost:3001/rfp.
+4. On the first tab, confirm **Reconnecting…** clears and that `ticket_id` appears once, labeled **Needs processing**.
+
 ## BFF proxy pattern
 
 The browser calls same-origin `/api/*` routes. Next.js proxies server-side to FastAPI at `http://127.0.0.1:8000` (no direct browser access to port 8000) and forwards the bearer token from `localStorage` via `authFetch`.
@@ -72,7 +81,7 @@ The browser calls same-origin `/api/*` routes. Next.js proxies server-side to Fa
 | `INCIDENTS_API_URL` | `http://127.0.0.1:8000` | `/api/incidents/*` (M5 analyze/export and M11 manager) |
 | `SUPPLIERS_API_URL` | `http://127.0.0.1:8000` | `/api/suppliers/*` |
 | `AUTH_API_URL` | `http://127.0.0.1:8000` | `/api/auth/*`, `/api/users`, `/api/profiles/*` |
-| `INVENTORY_API_URL` | `http://127.0.0.1:8000` | `/api/inventory/*`, `/api/reporting/*`, `/api/telemetry/*` |
+| `INVENTORY_API_URL` | `http://127.0.0.1:8000` | `/api/inventory/*`, `/api/reporting/*`, `/api/telemetry/*`, `/api/rfp/*` |
 
 ### Error handling (M12)
 

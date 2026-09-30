@@ -12,6 +12,15 @@ class TicketCreated(BaseModel):
     status: str = "analyzing"
 
 
+class TicketNotice(BaseModel):
+    ticket_id: str
+    status: str
+
+
+class TicketNoticeList(BaseModel):
+    tickets: list[TicketNotice]
+
+
 class RfpMetadataOut(BaseModel):
     client_name: str | None = None
     client_country: str = "unknown"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlmodel import Session
 
 from auth.dependencies import get_current_user
@@ -13,7 +13,14 @@ from auth.models import UserPublic, UserRole
 from auth.services.profiles import get_profile_by_user_id
 from inventory.database import get_db
 from rfp import service as rfp_service
-from rfp.schemas import ApprovalDecisionIn, TicketCreated, TicketOut, TicketSectionsOut
+from rfp.events import event_stream, subscribe
+from rfp.schemas import (
+    ApprovalDecisionIn,
+    TicketCreated,
+    TicketNoticeList,
+    TicketOut,
+    TicketSectionsOut,
+)
 
 router = APIRouter(prefix="/rfp", tags=["rfp"])
 
@@ -58,6 +65,25 @@ async def upload_ticket(
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
         content=created.model_dump(),
+    )
+
+
+@router.get("/tickets", response_model=TicketNoticeList)
+def read_recent_tickets(session: DbSession, _: CurrentUser) -> TicketNoticeList:
+    return rfp_service.list_recent_tickets(session)
+
+
+@router.get("/events")
+async def ticket_events(_: CurrentUser) -> StreamingResponse:
+    subscriber = subscribe()
+    return StreamingResponse(
+        event_stream(subscriber),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
