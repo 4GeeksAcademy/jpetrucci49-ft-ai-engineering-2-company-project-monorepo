@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: RFP response generation Part 2 (9.6)_
+_Last updated: RFP approval and completion Part 3 (9.7)_
 
 ## Completed
 
@@ -317,6 +317,15 @@ _Last updated: RFP response generation Part 2 (9.6)_
 - [x] `POST /rfp/tickets/{id}/draft` 202 + background run; GET ticket/sections include drafts + evals; CLI `scripts/run_rfp_draft.py`
 - [x] Backoffice `/rfp` generate + poll + provisional badge
 - [x] Tests: `tests/pipelines/test_rfp_draft.py` (revenue generator, relevance fail, `baa-us`, PHI, persist)
+
+### RFP approval and completion Part 3 (9.7)
+
+- [x] Spec: `specs/09.7_RFP_APPROVAL_SPECS.md`; context: `context/09.5_CONTEXT.md`
+- [x] Dedicated `rfp_approval` graph: one SqliteSaver thread per department, parent join with no interrupt
+- [x] Decisions `approve` / `request_changes` / `reject`; cap 3; CONTEXT triggers `phi-detected`, `baa-dpa-mismatch`, `capacity-vs-population`
+- [x] Statuses `waiting_for_approval` and `done`; `final_document_json` after all three owners approve
+- [x] `POST /rfp/tickets/{id}/approvals` 202 and `POST .../approvals/{department_id}`; backoffice `/rfp` decisions
+- [x] Tests: `tests/pipelines/test_rfp_approval.py`; smoke: `scripts/run_rfp_approval_e2e.py`
 
 ## In progress
 

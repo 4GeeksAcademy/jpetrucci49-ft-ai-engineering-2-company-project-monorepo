@@ -21,6 +21,8 @@ TICKET_STATUSES = (
     "drafting",
     "under_evaluation",
     "needs_human_review",
+    "waiting_for_approval",
+    "done",
 )
 DISCARD_REASONS = ("not_an_rfp", "pipeline_error")
 DEPARTMENT_IDS = ("revenue", "clinical", "compliance")
@@ -42,7 +44,8 @@ class RfpTicket(SQLModel, table=True):
     __table_args__ = (
         CheckConstraint(
             "status IN ('analyzing', 'discarded', 'intake_complete', "
-            "'drafting', 'under_evaluation', 'needs_human_review')",
+            "'drafting', 'under_evaluation', 'needs_human_review', "
+            "'waiting_for_approval', 'done')",
             name="ck_rfp_tickets_status",
         ),
         CheckConstraint(
@@ -61,6 +64,7 @@ class RfpTicket(SQLModel, table=True):
     markdown_path: str | None = Field(default=None, max_length=512)
     handoff_json: dict | None = Field(default=None, sa_column=Column(JsonCol, nullable=True))
     part2_handoff_json: dict | None = Field(default=None, sa_column=Column(JsonCol, nullable=True))
+    final_document_json: dict | None = Field(default=None, sa_column=Column(JsonCol, nullable=True))
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -127,12 +131,13 @@ class RfpDepartmentSection(SQLModel, table=True):
 
 _STATUS_CHECK = (
     "status IN ('analyzing', 'discarded', 'intake_complete', "
-    "'drafting', 'under_evaluation', 'needs_human_review')"
+    "'drafting', 'under_evaluation', 'needs_human_review', "
+    "'waiting_for_approval', 'done')"
 )
 
 
 def ensure_rfp_schema(engine) -> None:
-    """Widen status CHECK and add ``part2_handoff_json`` on existing databases.
+    """Widen status CHECK and add later JSON columns on existing databases.
 
     ``create_all`` will not ALTER a live Postgres CHECK from Part 1.
     """
@@ -141,10 +146,12 @@ def ensure_rfp_schema(engine) -> None:
         return
     columns = {column["name"] for column in inspector.get_columns("rfp_tickets")}
     dialect = engine.dialect.name
+    json_type = "JSONB" if dialect == "postgresql" else "JSON"
     with engine.begin() as conn:
         if "part2_handoff_json" not in columns:
-            col_type = "JSONB" if dialect == "postgresql" else "JSON"
-            conn.execute(text(f"ALTER TABLE rfp_tickets ADD COLUMN part2_handoff_json {col_type}"))
+            conn.execute(text(f"ALTER TABLE rfp_tickets ADD COLUMN part2_handoff_json {json_type}"))
+        if "final_document_json" not in columns:
+            conn.execute(text(f"ALTER TABLE rfp_tickets ADD COLUMN final_document_json {json_type}"))
         if dialect == "postgresql":
             conn.execute(text("ALTER TABLE rfp_tickets DROP CONSTRAINT IF EXISTS ck_rfp_tickets_status"))
             conn.execute(text(f"ALTER TABLE rfp_tickets ADD CONSTRAINT ck_rfp_tickets_status CHECK ({_STATUS_CHECK})"))

@@ -89,6 +89,7 @@ def get_ticket(session: Session, ticket_id: str) -> TicketOut:
         metadata=metadata_out,
         handoff_json=ticket.handoff_json,
         part2_handoff_json=ticket.part2_handoff_json,
+        final_document_json=ticket.final_document_json,
     )
 
 
@@ -108,10 +109,81 @@ def get_sections(session: Session, ticket_id: str) -> TicketSectionsOut:
             open_questions=list((by_dept[dept].open_questions if dept in by_dept else None) or []),
             draft_content=by_dept[dept].draft_content if dept in by_dept else None,
             evaluation_results=by_dept[dept].evaluation_results if dept in by_dept else None,
+            approval_status=by_dept[dept].approval_status if dept in by_dept else None,
+            approver=by_dept[dept].approver if dept in by_dept else None,
+            approved_at=by_dept[dept].approved_at if dept in by_dept else None,
+            blocking_triggers=_blocking_triggers(ticket_id, dept),
         )
         for dept, owner in DEPARTMENT_OWNERS.items()
     ]
     return TicketSectionsOut(ticket_id=ticket_id, sections=sections)
+
+
+def _blocking_triggers(ticket_id: str, department_id: str) -> list[str]:
+    try:
+        from data.pipelines.rfp_approval.graph import branch_interrupt
+
+        payload = branch_interrupt(ticket_id, department_id)
+    except Exception:
+        return []
+    if not payload:
+        return []
+    return [str(item) for item in (payload.get("blocking_triggers") or [])]
+
+
+_APPROVAL_ENTRY = frozenset({"under_evaluation", "needs_human_review"})
+
+
+def start_approvals(session: Session, ticket_id: str) -> TicketCreated:
+    """Open department interrupts before the 202 response is sent."""
+    ticket = session.get(RfpTicket, ticket_id)
+    if ticket is None:
+        raise RfpTicketNotFoundError(ticket_id)
+    if not ticket.part2_handoff_json:
+        raise RfpTicketConflictError("Ticket has no proposal draft to approve.")
+    from data.pipelines.rfp_approval.decisions import ApprovalNotWaiting
+    from data.pipelines.rfp_approval.graph import any_branch_waiting
+    from data.pipelines.rfp_approval.graph import start_approvals as run_approvals
+
+    waiting = any_branch_waiting(ticket_id)
+    retry = ticket.status == "waiting_for_approval" and not waiting
+    if ticket.status not in _APPROVAL_ENTRY and not retry:
+        raise RfpTicketConflictError("Ticket is not ready for department approval.")
+    if waiting:
+        raise RfpTicketConflictError("Department approval is already waiting.")
+    try:
+        run_approvals(ticket_id)
+    except ApprovalNotWaiting as exc:
+        raise RfpTicketConflictError(str(exc)) from exc
+    return TicketCreated(ticket_id=ticket_id, status="waiting_for_approval")
+
+
+def submit_approval(
+    session: Session,
+    ticket_id: str,
+    department_id: str,
+    *,
+    decision: str,
+    comment: str | None,
+    approver: str,
+    draft_content: str | None = None,
+) -> TicketOut:
+    ticket = session.get(RfpTicket, ticket_id)
+    if ticket is None:
+        raise RfpTicketNotFoundError(ticket_id)
+    from data.pipelines.rfp_approval.graph import resume_approval
+
+    # Approve stores draft_content when the manager edited the proposal on the card.
+    resume_approval(
+        ticket_id,
+        department_id,
+        decision,
+        comment,
+        approver=approver,
+        draft_content=draft_content,
+    )
+    session.expire_all()
+    return get_ticket(session, ticket_id)
 
 
 def start_draft(session: Session, ticket_id: str) -> TicketCreated:

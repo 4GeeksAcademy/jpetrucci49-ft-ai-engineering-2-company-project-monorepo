@@ -36,6 +36,7 @@ class TicketOut(BaseModel):
     metadata: RfpMetadataOut | None = None
     handoff_json: dict | None = None
     part2_handoff_json: dict | None = None
+    final_document_json: dict | None = None
 
 
 class DepartmentSectionOut(BaseModel):
@@ -45,6 +46,16 @@ class DepartmentSectionOut(BaseModel):
     open_questions: list[str] = Field(default_factory=list)
     draft_content: str | None = None
     evaluation_results: dict | None = None
+    approval_status: str | None = None
+    approver: str | None = None
+    approved_at: datetime | None = None
+    blocking_triggers: list[str] = Field(default_factory=list)
+
+
+class ApprovalDecisionIn(BaseModel):
+    decision: str
+    comment: str | None = None
+    draft_content: str | None = None
 
 
 class TicketSectionsOut(BaseModel):

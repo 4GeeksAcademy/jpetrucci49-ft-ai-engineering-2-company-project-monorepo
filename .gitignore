@@ -39,6 +39,7 @@ uis/**/next-env.d.ts
 
 # Runtime desk-agent traces (keep committed fixtures)
 data/eval/agent_traces/*
+data/eval/rfp_approval_traces/*
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000001.json
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000002.json
 !data/eval/agent_traces/00000000-0000-4000-8000-000000000003.json
@@ -51,6 +52,10 @@ data/eval/agent_traces/*
 # Pipeline local artifacts (keep committed samples)
 data/raw/reporting.db
 data/raw/reporting.db-journal
+data/raw/rfp_approval.sqlite
+data/raw/rfp_approval.sqlite-journal
+data/raw/rfp_approval.sqlite-wal
+data/raw/rfp_approval.sqlite-shm
 data/raw/extract_*.json
 data/raw/kpis_*.json
 data/raw/telemetry_*.csv
