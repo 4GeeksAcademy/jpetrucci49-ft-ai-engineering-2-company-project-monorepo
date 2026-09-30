@@ -203,6 +203,7 @@ def init_inventory_schema() -> None:
     """Create tables if missing. Skip when tests have no database URL (SQLite fixture owns schema)."""
     import inventory.models  # noqa: F401 — register tables on SQLModel.metadata
     import telemetry.table  # noqa: F401 — same engine; include telemetry_events
+    import rfp.models  # noqa: F401 — same engine; RFP tickets / metadata / sections
 
     if _is_test_environment() and not os.getenv("SUPABASE_DATABASE_URL", "").strip():
         return
