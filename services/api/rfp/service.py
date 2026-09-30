@@ -165,13 +165,14 @@ def submit_approval(
     *,
     decision: str,
     comment: str | None,
+    approver: str,
 ) -> TicketOut:
     ticket = session.get(RfpTicket, ticket_id)
     if ticket is None:
         raise RfpTicketNotFoundError(ticket_id)
     from data.pipelines.rfp_approval.graph import resume_approval
 
-    resume_approval(ticket_id, department_id, decision, comment)
+    resume_approval(ticket_id, department_id, decision, comment, approver=approver)
     session.expire_all()
     return get_ticket(session, ticket_id)
 

@@ -166,6 +166,8 @@ def test_interrupt_resume_sets_owner_from_checkpoint(approval_db, tmp_path: Path
     assert row.approval_status == "approved"
     assert row.approver == "Claire Whitfield"
     assert row.approved_at is not None
+    resume_approval(ticket_id, "revenue", "approve", None, approver="Alex Rivera")
+    assert _section(approval_db, ticket_id, "revenue").approver == "Alex Rivera"
     events = _trace(tmp_path, ticket_id)
     interrupt_at = next(index for index, item in enumerate(events) if item["node"] == "interrupt_approval")
     resume_at = next(index for index, item in enumerate(events) if item["node"] == "resume_approval")

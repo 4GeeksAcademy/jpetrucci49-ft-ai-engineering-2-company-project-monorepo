@@ -9,7 +9,8 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from auth.dependencies import get_current_user
-from auth.models import UserPublic
+from auth.models import UserPublic, UserRole
+from auth.services.profiles import get_profile_by_user_id
 from inventory.database import get_db
 from rfp import service as rfp_service
 from rfp.schemas import ApprovalDecisionIn, TicketCreated, TicketOut, TicketSectionsOut
@@ -18,6 +19,14 @@ router = APIRouter(prefix="/rfp", tags=["rfp"])
 
 CurrentUser = Annotated[UserPublic, Depends(get_current_user)]
 DbSession = Annotated[Session, Depends(get_db)]
+_DECISION_ROLES = {UserRole.manager, UserRole.admin}
+
+
+def _signed_in_approver(user: UserPublic) -> str:
+    profile = get_profile_by_user_id(user.id)
+    if profile is not None and profile.name.strip():
+        return profile.name.strip()
+    return str(user.email)
 
 
 def _is_pdf(filename: str, content: bytes) -> bool:
@@ -89,11 +98,13 @@ def submit_approval(
     department_id: str,
     body: ApprovalDecisionIn,
     session: DbSession,
-    _: CurrentUser,
+    user: CurrentUser,
 ) -> TicketOut:
     from data.pipelines.rfp_approval.decisions import ApprovalBlocked, ApprovalNotWaiting, InvalidDecision
     from data.pipelines.rfp_approval.graph import InvalidDepartment
 
+    if user.role not in _DECISION_ROLES:
+        raise HTTPException(status_code=403, detail="A manager has to record this department decision.")
     try:
         return rfp_service.submit_approval(
             session,
@@ -101,6 +112,7 @@ def submit_approval(
             department_id,
             decision=body.decision,
             comment=body.comment,
+            approver=_signed_in_approver(user),
         )
     except rfp_service.RfpTicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Ticket not found.") from exc

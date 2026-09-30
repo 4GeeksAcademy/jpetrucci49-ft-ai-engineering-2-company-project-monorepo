@@ -238,7 +238,13 @@ def start_approvals(ticket_id: str) -> None:
         raise
 
 
-def resume_approval(ticket_id: str, department_id: str, decision: str, comment: str | None) -> None:
+def resume_approval(
+    ticket_id: str,
+    department_id: str,
+    decision: str,
+    comment: str | None,
+    approver: str | None = None,
+) -> None:
     """Resume one department thread, then join. Other threads stay put."""
     if department_id not in DEPARTMENT_OWNERS:
         raise InvalidDepartment(department_id)
@@ -246,6 +252,9 @@ def resume_approval(ticket_id: str, department_id: str, decision: str, comment: 
     if payload is None:
         raise ApprovalNotWaiting(department_id)
     parsed = parse_decision(decision, comment)
+    named = (approver or "").strip()
+    if named:
+        parsed["approver"] = named
     blocking = list(payload.get("blocking_triggers") or [])
     if parsed["decision"] == "approve" and blocking:
         raise ApprovalBlocked(str(blocking[0]))

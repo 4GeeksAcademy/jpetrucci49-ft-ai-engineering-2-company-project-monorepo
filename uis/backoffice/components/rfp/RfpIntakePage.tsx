@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { authFetch } from "@healthcore/auth";
+import type { AuthMe } from "@healthcore/auth";
+
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RfpFilePicker } from "@/components/rfp/RfpFilePicker";
@@ -36,9 +39,6 @@ function shouldPoll(ticket: RfpTicket): boolean {
   }
   if (ticket.error_code === "draft_pipeline_error" || ticket.error_code === "approval_pipeline_error") {
     return false;
-  }
-  if (ticket.status === "waiting_for_approval") {
-    return true;
   }
   return (
     (ticket.status === "drafting" || ticket.status === "under_evaluation") &&
@@ -202,6 +202,7 @@ export function RfpIntakePage() {
   const [isStartingApproval, setIsStartingApproval] = useState(false);
   const [decisionDept, setDecisionDept] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [canRecordDecision, setCanRecordDecision] = useState(false);
   const ticketId = ticket?.ticket_id ?? null;
   const pollTicket = ticket != null && shouldPoll(ticket);
 
@@ -245,6 +246,34 @@ export function RfpIntakePage() {
     };
   }, [ticketId, pollTicket]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAccount() {
+      try {
+        const response = await authFetch("/api/auth/me");
+        if (!response.ok) {
+          return;
+        }
+        const account = (await response.json()) as AuthMe;
+        if (!cancelled) {
+          setCanRecordDecision(account.role === "manager" || account.role === "admin");
+        }
+      } catch {
+        if (!cancelled) {
+          setCanRecordDecision(false);
+        }
+      }
+    }
+    void loadAccount();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function commentKey(departmentId: string): string {
+    return `${ticketId ?? "new"}:${departmentId}`;
+  }
+
   function onFileSelected(file: File) {
     chosenFile.current = file;
     setHasFile(true);
@@ -261,6 +290,7 @@ export function RfpIntakePage() {
     setError(null);
     setTicket(null);
     setSections([]);
+    setComments({});
     try {
       const created = await uploadRfpPdf(pdf);
       setTicket({
@@ -327,7 +357,8 @@ export function RfpIntakePage() {
     if (!ticket) {
       return;
     }
-    const comment = (comments[departmentId] ?? "").trim();
+    const key = commentKey(departmentId);
+    const comment = (comments[key] ?? "").trim();
     if ((decision === "request_changes" || decision === "reject") && !comment) {
       setError("A comment is required to request changes or reject.");
       return;
@@ -338,6 +369,7 @@ export function RfpIntakePage() {
       const next = await submitRfpDecision(ticket.ticket_id, departmentId, decision, comment || undefined);
       setTicket(next);
       setSections(await getRfpSections(ticket.ticket_id));
+      setComments((current) => ({ ...current, [key]: "" }));
     } catch (caught) {
       setError(caught instanceof RfpApiError ? caught.message : "Unable to record that decision.");
     } finally {
@@ -390,10 +422,7 @@ export function RfpIntakePage() {
             {ticket.status === "analyzing" ? (
               <LoadingState label="Conversion and department analysis running…" layout="inline" />
             ) : null}
-            {shouldPoll(ticket) && ticket.status === "waiting_for_approval" ? (
-              <LoadingState label="Waiting for department decisions…" layout="inline" />
-            ) : null}
-            {shouldPoll(ticket) && ticket.status !== "analyzing" && ticket.status !== "waiting_for_approval" ? (
+            {shouldPoll(ticket) && ticket.status !== "analyzing" ? (
               <LoadingState label="Generating and evaluating proposal drafts…" layout="inline" />
             ) : null}
           </div>
@@ -491,16 +520,19 @@ export function RfpIntakePage() {
                       Approved by {section.approver}
                     </p>
                   ) : null}
-                  {ticket.status === "waiting_for_approval" && section.approval_status !== "approved" ? (
+                  {ticket.status === "waiting_for_approval" && section.approval_status !== "approved" && canRecordDecision ? (
                     <ApprovalActions
                       section={section}
-                      comment={comments[section.department_id] ?? ""}
+                      comment={comments[commentKey(section.department_id)] ?? ""}
                       busy={decisionDept === section.department_id}
                       onComment={(value) =>
-                        setComments((current) => ({ ...current, [section.department_id]: value }))
+                        setComments((current) => ({ ...current, [commentKey(section.department_id)]: value }))
                       }
                       onDecision={(decision) => void onDecision(section.department_id, decision)}
                     />
+                  ) : null}
+                  {ticket.status === "waiting_for_approval" && section.approval_status !== "approved" && !canRecordDecision ? (
+                    <p className="mt-3 text-xs text-slate-600">A manager has to record this decision.</p>
                   ) : null}
                 </article>
               ))}

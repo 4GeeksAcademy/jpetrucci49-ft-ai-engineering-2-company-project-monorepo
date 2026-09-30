@@ -122,7 +122,8 @@ def apply_node(state: BranchState) -> dict[str, Any]:
         }
     if kind == "approve":
         approved_at = ticket_now()
-        _persist_branch(state, approval_status="approved", approver=state.get("owner"), approved_at=approved_at)
+        approver = str(decision.get("approver") or "").strip() or state.get("owner")
+        _persist_branch(state, approval_status="approved", approver=approver, approved_at=approved_at)
         return {
             "approval_status": "approved",
             "route": "done",
