@@ -173,6 +173,7 @@ def submit_approval(
         raise RfpTicketNotFoundError(ticket_id)
     from data.pipelines.rfp_approval.graph import resume_approval
 
+    # Approve stores draft_content when the manager edited the proposal on the card.
     resume_approval(
         ticket_id,
         department_id,

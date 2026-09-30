@@ -186,6 +186,17 @@ def test_resume_clinical_leaves_revenue_interrupted(approval_db) -> None:
     assert _ticket(approval_db, ticket_id).final_document_json is None
 
 
+def test_approve_keeps_edited_proposal(approval_db) -> None:
+    ticket_id = "approve-edited"
+    _seed(approval_db, ticket_id, CLEAN_DRAFTS)
+    start_approvals(ticket_id)
+    revised = "Revenue proposal edited on the card for Meridian Manufacturing in USD."
+    resume_approval(ticket_id, "revenue", "approve", None, draft_content=revised)
+    row = _section(approval_db, ticket_id, "revenue")
+    assert row.approval_status == "approved"
+    assert row.draft_content == revised
+
+
 def test_request_changes_saves_edited_proposal_and_comment(approval_db) -> None:
     ticket_id = "edited-draft"
     _seed(approval_db, ticket_id, CLEAN_DRAFTS)

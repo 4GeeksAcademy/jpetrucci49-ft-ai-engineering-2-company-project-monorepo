@@ -141,8 +141,27 @@ def apply_node(state: BranchState) -> dict[str, Any]:
     if kind == "approve":
         approved_at = ticket_now()
         approver = str(decision.get("approver") or "").strip() or state.get("owner")
-        _persist_branch(state, approval_status="approved", approver=approver, approved_at=approved_at)
+        draft = _edited_draft(state) or (state.get("draft_content") or "")
+        evaluation = dict(state.get("evaluation_results") or {})
+        from agent.memory.phi import contains_phi
+
+        if contains_phi(draft):
+            draft = PHI_STUB
+            compliance = dict(evaluation.get("compliance") or {})
+            compliance["contains_phi"] = True
+            compliance["pass"] = False
+            evaluation["compliance"] = compliance
+        _persist_branch(
+            state,
+            approval_status="approved",
+            approver=approver,
+            approved_at=approved_at,
+            draft_content=draft,
+            evaluation_results=evaluation,
+        )
         return {
+            "draft_content": draft,
+            "evaluation_results": evaluation,
             "approval_status": "approved",
             "route": "done",
             "trace": [event("resume_approval", dept, "approve", "approved")],

@@ -198,7 +198,7 @@ function ApprovalActions({
       <p id={`approval-comment-hint-${section.department_id}`} className="text-xs text-slate-500">
         {commentRequired
           ? "Request changes and Reject stay unavailable until a comment is added."
-          : "Request changes saves the proposal text above with this comment."}
+          : "Approve and Request changes save the proposal text above."}
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -416,7 +416,7 @@ export function RfpIntakePage() {
         departmentId,
         decision,
         comment || undefined,
-        decision === "approve" ? undefined : edited || undefined,
+        edited || undefined,
       );
       setTicket(next);
       setSections(await getRfpSections(ticket.ticket_id));
@@ -581,7 +581,7 @@ export function RfpIntakePage() {
                           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm font-normal normal-case text-slate-900"
                         />
                       </label>
-                      <p className="mt-1 text-xs text-slate-500">Edit the proposal here. Request changes saves this text.</p>
+                      <p className="mt-1 text-xs text-slate-500">Edit the proposal here. Approve saves this text.</p>
                       <EvalSummary evaluation={section.evaluation_results} />
                     </div>
                   ) : section.draft_content ? (
