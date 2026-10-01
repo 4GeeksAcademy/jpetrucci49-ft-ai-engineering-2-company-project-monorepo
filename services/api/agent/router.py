@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from pydantic import BaseModel
 
+from agent.chat import serve_chat
 from agent.graph import run_desk_agent
 from agent.harness.observe import summary as guardrail_summary
 from agent.nodes import EMPTY_QUESTION
@@ -18,6 +19,11 @@ from auth.models import UserPublic
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["agent"])
+
+
+@router.websocket("/chat")
+async def agent_chat(websocket: WebSocket) -> None:
+    await serve_chat(websocket)
 
 
 class AgentQueryIn(BaseModel):

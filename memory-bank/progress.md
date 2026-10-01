@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: SSE ticket notices (10.5) aligned to the accepted-ticket event_
+_Last updated: Desk chat WebSocket (10.6) event frames_
 
 ## Completed
 
@@ -335,6 +335,14 @@ _Last updated: SSE ticket notices (10.5) aligned to the accepted-ticket event_
 - [x] `GET /rfp/tickets` returns the newest 20 with the same seven ticket fields so a missed event is recovered on reconnect
 - [x] Backoffice `/` shows institution, country, and program type, streams `/api/rfp/events` with `authFetch`, and dedupes on `ticket_id`
 - [x] Tests: `tests/pipelines/test_rfp_sse.py`
+
+### Desk chat WebSocket (10.6)
+
+- [x] Spec: `specs/10.6_WEBSOCKET_SPECS.md`; context: `context/10.6_CONTEXT.md`
+- [x] `WS /agent/chat` streams `token_chunk` (`token`, `sequence`) for `compliance_assistant`; `interrupt_requested` aborts the HTTP stream and keeps the partial reply
+- [x] One producer on `chat.<session_id>` fans out to every socket; reconnect sends `session_snapshot`
+- [x] Desk page `/knowledge` appends each token and sends `interrupt_requested` while a reply is in progress
+- [x] Tests: `tests/pipelines/test_agent_ws.py`
 
 ## In progress
 
