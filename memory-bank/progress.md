@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: SSE ticket notices (10.5) aligned to the accepted-ticket event_
+_Last updated: Desk chat WebSocket (10.6) event frames_
 
 ## Completed
 
@@ -338,10 +338,10 @@ _Last updated: SSE ticket notices (10.5) aligned to the accepted-ticket event_
 
 ### Desk chat WebSocket (10.6)
 
-- [x] Spec: `specs/10.6_WEBSOCKET_SPECS.md`. Not the operator pause/resume/cancel flow in `context/10.6_CONTEXT.md`
-- [x] `WS /agent/chat` streams `compliance_assistant` / `chat_session` tokens; interrupt aborts the HTTP stream and keeps the partial reply
-- [x] One generation per `session_id` fans out to every socket; reconnect sends that session’s history
-- [x] Desk page `/knowledge` renders tokens as they arrive
+- [x] Spec: `specs/10.6_WEBSOCKET_SPECS.md`; context: `context/10.6_CONTEXT.md`
+- [x] `WS /agent/chat` streams `token_chunk` (`token`, `sequence`) for `compliance_assistant`; `interrupt_requested` aborts the HTTP stream and keeps the partial reply
+- [x] One producer on `chat.<session_id>` fans out to every socket; reconnect sends `session_snapshot`
+- [x] Desk page `/knowledge` appends each token and sends `interrupt_requested` while a reply is in progress
 - [x] Tests: `tests/pipelines/test_agent_ws.py`
 
 ## In progress

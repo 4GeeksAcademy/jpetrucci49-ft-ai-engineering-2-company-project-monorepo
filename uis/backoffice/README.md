@@ -75,7 +75,7 @@ The operations dashboard at `/` lists the newest RFP tickets and listens for `rf
 
 ## Desk chat (10.6)
 
-`/knowledge` talks to `WS /agent/chat` on the API (default `ws://127.0.0.1:8000`). The browser sends the same JWT on the query string.
+`/knowledge` talks to `WS /agent/chat` on the API (default `ws://127.0.0.1:8000`). The browser sends the same JWT on the query string. Frames use `event` and `data`. A second question sends `interrupt_requested`. Reload restores the thread from `session_snapshot`.
 
 1. Sign in and open http://localhost:3001/knowledge.
 2. Ask a question. The answer should grow as tokens arrive, not appear all at once.

@@ -25,6 +25,7 @@ export function DeskKnowledgePage() {
   const [generating, setGenerating] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const generatingRef = useRef(false);
+  const sessionIdRef = useRef("");
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +34,7 @@ export function DeskKnowledgePage() {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const sessionId = readSessionId();
+    sessionIdRef.current = sessionId;
 
     function connect() {
       if (cancelled) return;
@@ -55,16 +57,17 @@ export function DeskKnowledgePage() {
         } catch {
           return;
         }
-        if (frame.type === "error") {
-          setGenerating(false);
-          setError(frame.detail || "Unable to get an answer from the knowledge base.");
-          return;
-        }
-        if (frame.type === "generation_completed") {
+        if (frame.event === "generation_completed") {
           generatingRef.current = false;
           setGenerating(false);
-        } else if (frame.type === "generation_interrupted") {
+        } else if (frame.event === "generation_interrupted") {
           setGenerating(generatingRef.current);
+        } else if (frame.event === "session_snapshot") {
+          const open = (frame.data?.messages ?? []).some(
+            (message) => message.role === "assistant" && !message.status
+          );
+          generatingRef.current = open;
+          setGenerating(open);
         }
         setMessages((current) => applyDeskFrame(current, frame));
       };
@@ -93,9 +96,10 @@ export function DeskKnowledgePage() {
     if (!text || socket === null || socket.readyState !== WebSocket.OPEN) {
       return;
     }
+    const sessionId = sessionIdRef.current;
     const payload = generatingRef.current
-      ? { type: "interrupt", new_input: text }
-      : { type: "user_message", text };
+      ? { event: "interrupt_requested", data: { session_id: sessionId, new_input: text } }
+      : { event: "user_message", data: { session_id: sessionId, text } };
     generatingRef.current = true;
     socket.send(JSON.stringify(payload));
     setGenerating(true);
@@ -122,7 +126,7 @@ export function DeskKnowledgePage() {
         ) : (
           <ol className="space-y-3">
             {messages.map((message) => (
-              <li key={message.id} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+              <li key={message.message_id} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   {message.role === "user" ? "You" : "Compliance assistant"}
                 </p>

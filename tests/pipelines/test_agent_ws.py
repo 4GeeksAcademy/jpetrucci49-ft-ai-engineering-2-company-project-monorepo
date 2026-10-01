@@ -50,7 +50,7 @@ def test_chat_rejects_a_missing_token(chat_api) -> None:
     client, _ = chat_api
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/agent/chat?session_id=session-1") as ws:
-            ws.send_json({"type": "user_message", "text": "Hello"})
+            ws.send_json({"event": "user_message", "data": {"session_id": "session-1", "text": "Hello"}})
             ws.receive_json()
 
 
@@ -59,19 +59,24 @@ def test_user_message_streams_then_completes(chat_api, monkeypatch: pytest.Monke
     monkeypatch.setattr("agent.chat.produce_answer", _quick_answer)
     with client.websocket_connect(_url("session-ok", token)) as ws:
         history = ws.receive_json()
-        assert history["type"] == "history"
-        assert history["agent_id"] == "compliance_assistant"
-        assert history["flow_type"] == "chat_session"
-        assert history["flow_id"] == "session-ok"
-        assert history["messages"] == []
-        ws.send_json({"type": "user_message", "text": "What is the cancellation charge?"})
+        assert history["event"] == "session_snapshot"
+        assert history["data"]["session_id"] == "session-ok"
+        assert history["data"]["messages"] == []
+        assert "ticket_id" not in history["data"]
+        ws.send_json(
+            {
+                "event": "user_message",
+                "data": {"session_id": "session-ok", "text": "What is the cancellation charge?"},
+            }
+        )
         frames = _until(ws, "generation_completed")
-    chunks = [frame for frame in frames if frame["type"] == "token_chunk"]
-    assert [frame["text"] for frame in chunks] == ["Pol", "icy"]
+    chunks = [frame for frame in frames if frame["event"] == "token_chunk"]
+    assert [frame["data"]["token"] for frame in chunks] == ["Pol", "icy"]
+    assert [frame["data"]["sequence"] for frame in chunks] == [1, 2]
     completed = frames[-1]
-    assert completed["status"] == "completed"
-    assert completed["message_id"]
-    assert "ticket_id" not in completed
+    assert completed["data"]["message_id"]
+    assert "text" not in completed["data"]
+    assert "ticket_id" not in completed["data"]
 
 
 def test_interrupt_stops_tokens_and_starts_a_new_turn(
@@ -81,21 +86,23 @@ def test_interrupt_stops_tokens_and_starts_a_new_turn(
     monkeypatch.setattr("agent.chat.produce_answer", _interruptible_answer)
     with client.websocket_connect(_url("session-stop", token)) as ws:
         ws.receive_json()
-        ws.send_json({"type": "user_message", "text": "First question"})
-        first = _until(ws, "token_chunk")
-        first_id = first[-1]["message_id"]
-        ws.send_json({"type": "interrupt", "new_input": "Ask about referrals instead"})
+        ws.send_json({"event": "user_message", "data": {"session_id": "session-stop", "text": "First question"}})
+        _until(ws, "token_chunk")
+        ws.send_json(
+            {
+                "event": "interrupt_requested",
+                "data": {"session_id": "session-stop", "new_input": "Ask about referrals instead"},
+            }
+        )
         rest = _until(ws, "generation_completed")
-    interrupted = next(frame for frame in rest if frame["type"] == "generation_interrupted")
-    assert interrupted["message_id"] == first_id
-    assert interrupted["status"] == "interrupted"
-    later_chunks = [
-        frame for frame in rest if frame["type"] == "token_chunk" and frame["message_id"] == first_id
-    ]
-    assert later_chunks == []
+    interrupted = next(frame for frame in rest if frame["event"] == "generation_interrupted")
+    assert interrupted["data"]["status"] == "interrupted"
+    assert interrupted["data"]["message_id"]
+    assert rest[0]["event"] == "generation_interrupted"
+    next_chunks = [frame for frame in rest if frame["event"] == "token_chunk"]
+    assert [frame["data"]["sequence"] for frame in next_chunks] == [1]
     completed = rest[-1]
-    assert completed["message_id"] != first_id
-    assert completed["status"] == "completed"
+    assert completed["data"]["message_id"] != interrupted["data"]["message_id"]
 
 
 def test_two_sockets_share_one_generation(chat_api, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -106,7 +113,9 @@ def test_two_sockets_share_one_generation(chat_api, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr("agent.chat.produce_answer", _shared_answer)
     with client.websocket_connect(_url("session-shared", token)) as first:
         first.receive_json()
-        first.send_json({"type": "user_message", "text": "Shared question"})
+        first.send_json(
+            {"event": "user_message", "data": {"session_id": "session-shared", "text": "Shared question"}}
+        )
         assert _SHARED_STARTED.wait(timeout=2)
         with client.websocket_connect(_url("session-shared", token)) as second:
             second.receive_json()
@@ -114,8 +123,8 @@ def test_two_sockets_share_one_generation(chat_api, monkeypatch: pytest.MonkeyPa
             first_frames = _until(first, "generation_completed")
             second_frames = _until(second, "generation_completed")
     assert _SHARED_CALLS == ["Shared question"]
-    assert [frame["text"] for frame in first_frames if frame["type"] == "token_chunk"] == ["A", "B"]
-    assert [frame["text"] for frame in second_frames if frame["type"] == "token_chunk"] == ["A", "B"]
+    assert [frame["data"]["token"] for frame in first_frames if frame["event"] == "token_chunk"] == ["A", "B"]
+    assert [frame["data"]["token"] for frame in second_frames if frame["event"] == "token_chunk"] == ["A", "B"]
 
 
 def test_reconnect_restores_the_interrupted_message(
@@ -125,13 +134,16 @@ def test_reconnect_restores_the_interrupted_message(
     monkeypatch.setattr("agent.chat.produce_answer", _interruptible_answer)
     with client.websocket_connect(_url("session-again", token)) as ws:
         ws.receive_json()
-        ws.send_json({"type": "user_message", "text": "First question"})
+        ws.send_json({"event": "user_message", "data": {"session_id": "session-again", "text": "First question"}})
         _until(ws, "token_chunk")
-        ws.send_json({"type": "interrupt", "new_input": ""})
+        ws.send_json(
+            {"event": "interrupt_requested", "data": {"session_id": "session-again", "new_input": ""}}
+        )
         _until(ws, "generation_interrupted")
     with client.websocket_connect(_url("session-again", token)) as ws:
         history = ws.receive_json()
-    assistant = next(row for row in history["messages"] if row["role"] == "assistant")
+    assert history["event"] == "session_snapshot"
+    assistant = next(row for row in history["data"]["messages"] if row["role"] == "assistant")
     assert assistant["status"] == "interrupted"
     assert assistant["text"]
 
@@ -201,17 +213,17 @@ _SHARED_RELEASE = threading.Event()
 _SHARED_CALLS: list[str] = []
 
 
-def _quick_answer(question: str, *, user_id: int, run_id: str, sink, cancel: threading.Event) -> str:
-    del question, user_id, run_id, cancel
+def _quick_answer(question: str, *, user_id: int, session_id: str, sink, cancel: threading.Event) -> str:
+    del question, user_id, session_id, cancel
     sink("Pol")
     sink("icy")
     return "Policy"
 
 
 def _interruptible_answer(
-    question: str, *, user_id: int, run_id: str, sink, cancel: threading.Event
+    question: str, *, user_id: int, session_id: str, sink, cancel: threading.Event
 ) -> str:
-    del user_id, run_id
+    del user_id, session_id
     if question != "First question":
         sink("Next")
         return "Next"
@@ -224,8 +236,8 @@ def _interruptible_answer(
     return "Hello"
 
 
-def _shared_answer(question: str, *, user_id: int, run_id: str, sink, cancel: threading.Event) -> str:
-    del user_id, run_id, cancel
+def _shared_answer(question: str, *, user_id: int, session_id: str, sink, cancel: threading.Event) -> str:
+    del user_id, session_id, cancel
     _SHARED_CALLS.append(question)
     _SHARED_STARTED.set()
     assert _SHARED_RELEASE.wait(timeout=2)
@@ -243,6 +255,6 @@ def _until(ws, event_type: str, limit: int = 20) -> list[dict]:
     for _ in range(limit):
         frame = ws.receive_json()
         frames.append(frame)
-        if frame.get("type") == event_type:
+        if frame.get("event") == event_type:
             return frames
     raise AssertionError(frames)

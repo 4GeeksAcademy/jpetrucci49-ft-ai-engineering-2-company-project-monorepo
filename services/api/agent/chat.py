@@ -1,4 +1,4 @@
-"""Desk chat sessions. One generation per session, fan-out to every open socket."""
+"""Desk chat sessions. One producer per ``chat.<session_id>``, fan-out to every socket."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import queue
 import threading
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -26,7 +27,6 @@ from jwt.exceptions import InvalidTokenError
 logger = logging.getLogger(__name__)
 
 AGENT_ID = "compliance_assistant"
-FLOW_TYPE = "chat_session"
 _QUEUE_SIZE = 32
 
 _lock = threading.Lock()
@@ -35,7 +35,7 @@ _sessions: dict[str, "ChatSession"] = {}
 
 @dataclass
 class ChatMessage:
-    id: str
+    message_id: str
     role: str
     text: str
     status: str
@@ -44,6 +44,10 @@ class ChatMessage:
 @dataclass
 class ChatSession:
     session_id: str
+    agent_id: str = AGENT_ID
+    user_id: int = 0
+    status: str = "active"
+    created_at: str = field(default_factory=lambda: _utc_now())
     messages: list[ChatMessage] = field(default_factory=list)
     subscribers: set[queue.Queue] = field(default_factory=set)
     cancel: threading.Event = field(default_factory=threading.Event)
@@ -51,6 +55,10 @@ class ChatSession:
     pending_input: str | None = None
     pending_user_id: int = 0
     guard: threading.Lock = field(default_factory=threading.Lock)
+
+
+def channel_name(session_id: str) -> str:
+    return f"chat.{session_id}"
 
 
 def reset_chat_sessions() -> None:
@@ -64,15 +72,19 @@ def produce_answer(
     question: str,
     *,
     user_id: int,
-    run_id: str,
+    session_id: str,
     sink,
     cancel: threading.Event,
 ) -> str:
-    """Run one desk turn. Tests replace this so the suite never calls a model."""
+    """Run one desk turn. Tests replace this so the suite never calls a model.
+
+    ``session_id`` is the LangGraph ``thread_id``. The call is a fresh invoke,
+    not ``Command(resume)``.
+    """
     sink_token = set_stream_sink(sink)
     cancel_token = set_stream_cancel(cancel)
     try:
-        result = run_desk_agent(question, user_id=user_id, run_id=run_id)
+        result = run_desk_agent(question, user_id=user_id, run_id=session_id)
     finally:
         reset_stream_sink(sink_token)
         reset_stream_cancel(cancel_token)
@@ -106,11 +118,11 @@ async def serve_chat(websocket: WebSocket) -> None:
         await websocket.close(code=1008)
         return
 
-    session = _get_session(session_id)
-    subscriber, history = _open_subscriber(session)
+    session = _get_session(session_id, user.id)
+    subscriber, snapshot = _open_subscriber(session)
     pump: asyncio.Task | None = None
     try:
-        await websocket.send_json(history)
+        await websocket.send_json(snapshot)
         pump = asyncio.create_task(_pump(websocket, subscriber))
         while True:
             raw = await websocket.receive_text()
@@ -130,13 +142,14 @@ def apply_client_frame(session: ChatSession, user_id: int, raw: str) -> None:
         return
     if not isinstance(frame, dict):
         return
-    kind = frame.get("type")
-    if kind == "user_message":
-        text = str(frame.get("text") or "").strip()
+    data = frame.get("data") if isinstance(frame.get("data"), dict) else {}
+    event = frame.get("event")
+    if event == "user_message":
+        text = str(data.get("text") or "").strip()
         if text:
             _enqueue_turn(session, user_id, text)
-    elif kind == "interrupt":
-        text = str(frame.get("new_input") or "").strip()
+    elif event == "interrupt_requested":
+        text = str(data.get("new_input") or "").strip()
         _interrupt(session, user_id, text)
 
 
@@ -162,15 +175,19 @@ def _interrupt(session: ChatSession, user_id: int, new_input: str) -> None:
 
 
 def _start_locked(session: ChatSession, user_id: int, text: str) -> None:
-    session.messages.append(ChatMessage(id=str(uuid.uuid4()), role="user", text=text, status="completed"))
-    assistant = ChatMessage(id=str(uuid.uuid4()), role="assistant", text="", status="")
+    session.status = "active"
+    session.user_id = user_id or session.user_id
+    session.messages.append(
+        ChatMessage(message_id=str(uuid.uuid4()), role="user", text=text, status="completed")
+    )
+    assistant = ChatMessage(message_id=str(uuid.uuid4()), role="assistant", text="", status="")
     session.messages.append(assistant)
     session.cancel = threading.Event()
     session.running = True
     session.pending_input = None
     thread = threading.Thread(
         target=_generate,
-        args=(session, assistant.id, text, user_id),
+        args=(session, assistant.message_id, text, user_id),
         daemon=True,
     )
     thread.start()
@@ -179,10 +196,13 @@ def _start_locked(session: ChatSession, user_id: int, text: str) -> None:
 def _generate(session: ChatSession, message_id: str, question: str, user_id: int) -> None:
     chunks: list[str] = []
     cancel = session.cancel
+    sequence = 0
 
     def sink(delta: str) -> None:
+        nonlocal sequence
         if cancel.is_set():
             return
+        sequence += 1
         chunks.append(delta)
         with session.guard:
             message = _find(session, message_id)
@@ -190,27 +210,21 @@ def _generate(session: ChatSession, message_id: str, question: str, user_id: int
                 message.text += delta
         _publish(
             session,
-            {
-                "type": "token_chunk",
-                "session_id": session.session_id,
-                "message_id": message_id,
-                "text": delta,
-            },
+            "token_chunk",
+            {"session_id": session.session_id, "token": delta, "sequence": sequence},
         )
 
     final = ""
-    failed = False
     try:
         final = produce_answer(
             question,
             user_id=user_id,
-            run_id=str(uuid.uuid4()),
+            session_id=session.session_id,
             sink=sink,
             cancel=cancel,
         )
     except Exception:
         logger.exception("desk chat generation failed")
-        failed = True
         final = "".join(chunks)
 
     if not cancel.is_set() and not chunks and final:
@@ -225,8 +239,9 @@ def _generate(session: ChatSession, message_id: str, question: str, user_id: int
             if message is not None:
                 message.text = streamed or message.text
                 message.status = "interrupted"
-            frame: dict = {
-                "type": "generation_interrupted",
+            session.status = "interrupted"
+            frame_event = "generation_interrupted"
+            frame_data: dict = {
                 "session_id": session.session_id,
                 "message_id": message_id,
                 "status": "interrupted",
@@ -235,57 +250,53 @@ def _generate(session: ChatSession, message_id: str, question: str, user_id: int
             if message is not None:
                 message.text = final or streamed
                 message.status = "completed"
-            frame = {
-                "type": "generation_completed",
-                "session_id": session.session_id,
-                "message_id": message_id,
-                "status": "completed",
-            }
+            session.status = "active"
+            frame_event = "generation_completed"
+            frame_data = {"session_id": session.session_id, "message_id": message_id}
             stored = message.text if message is not None else final
             if stored != streamed:
-                frame["text"] = stored
+                frame_data["text"] = stored
         pending = session.pending_input
         pending_user = session.pending_user_id
         session.pending_input = None
         session.running = False
-    if failed and not cancel.is_set():
-        _publish(session, {"type": "error", "detail": "Unable to answer from the knowledge base."})
-    _publish(session, frame)
+    _publish(session, frame_event, frame_data)
     if pending:
         _enqueue_turn(session, pending_user, pending)
 
 
-def _history_frame(session: ChatSession) -> dict:
-    messages = [_message_row(message) for message in session.messages]
+def _snapshot_frame(session: ChatSession) -> dict:
     return {
-        "type": "history",
-        "session_id": session.session_id,
-        "flow_id": session.session_id,
-        "agent_id": AGENT_ID,
-        "flow_type": FLOW_TYPE,
-        "messages": messages,
+        "event": "session_snapshot",
+        "data": {
+            "session_id": session.session_id,
+            "messages": [_message_row(message) for message in session.messages],
+        },
     }
 
 
-def _get_session(session_id: str) -> ChatSession:
+def _get_session(session_id: str, user_id: int) -> ChatSession:
+    channel = channel_name(session_id)
     with _lock:
-        session = _sessions.get(session_id)
+        session = _sessions.get(channel)
         if session is None:
-            session = ChatSession(session_id=session_id)
-            _sessions[session_id] = session
+            session = ChatSession(session_id=session_id, user_id=user_id, status="active")
+            _sessions[channel] = session
+        elif session.user_id == 0:
+            session.user_id = user_id
         return session
 
 
 def _open_subscriber(session: ChatSession) -> tuple[queue.Queue, dict]:
     subscriber: queue.Queue = queue.Queue(maxsize=_QUEUE_SIZE)
     with session.guard:
-        history = _history_frame(session)
+        snapshot = _snapshot_frame(session)
         session.subscribers.add(subscriber)
-    return subscriber, history
+    return subscriber, snapshot
 
 
 def _message_row(message: ChatMessage) -> dict:
-    row = {"id": message.id, "role": message.role, "text": message.text}
+    row = {"message_id": message.message_id, "role": message.role, "text": message.text}
     if message.status in {"completed", "interrupted"}:
         row["status"] = message.status
     return row
@@ -300,7 +311,8 @@ def _unsubscribe(session: ChatSession, subscriber: queue.Queue) -> None:
         pass
 
 
-def _publish(session: ChatSession, frame: dict) -> None:
+def _publish(session: ChatSession, event: str, data: dict) -> None:
+    frame = {"event": event, "data": data}
     with session.guard:
         subscribers = tuple(session.subscribers)
     for subscriber in subscribers:
@@ -317,9 +329,16 @@ def _publish(session: ChatSession, frame: dict) -> None:
 
 def _find(session: ChatSession, message_id: str) -> ChatMessage | None:
     for message in session.messages:
-        if message.id == message_id:
+        if message.message_id == message_id:
             return message
     return None
+
+
+def _utc_now() -> str:
+    text = datetime.now(timezone.utc).isoformat()
+    if text.endswith("+00:00"):
+        return text[:-6] + "Z"
+    return text
 
 
 async def _auth_frame_token(websocket: WebSocket) -> str | None:
@@ -333,10 +352,11 @@ async def _auth_frame_token(websocket: WebSocket) -> str | None:
     except json.JSONDecodeError:
         await websocket.close(code=1008)
         return None
-    if not isinstance(frame, dict) or frame.get("type") != "auth":
+    data = frame.get("data") if isinstance(frame, dict) else None
+    if not isinstance(frame, dict) or frame.get("event") != "auth" or not isinstance(data, dict):
         await websocket.close(code=1008)
         return None
-    return str(frame.get("token") or "")
+    return str(data.get("token") or "")
 
 
 async def _pump(websocket: WebSocket, subscriber: queue.Queue) -> None:
