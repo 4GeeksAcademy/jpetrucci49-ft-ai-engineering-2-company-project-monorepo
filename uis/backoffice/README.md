@@ -51,6 +51,7 @@ Telemetry capture (M6.5) posts batches to the FastAPI stub. Copy `NEXT_PUBLIC_TE
 | `/reporting` | M6.5 | Monthly Clinic Supply Performance Report (Dr. Okonkwo / Claire) |
 | `/telemetry` | M6.5 | Engineering telemetry health (events, errors, latency, login failures) |
 | `/rfp` | 9.5 / 9.6 / 9.7 | Institutional RFP intake, proposal drafts, and department approval |
+| `/knowledge` | 7.5 / 10.6 | Desk knowledge chat. Tokens stream over a WebSocket; a second question interrupts the reply |
 
 ## Testing password recovery (M9)
 
@@ -71,6 +72,15 @@ The operations dashboard at `/` lists the newest RFP tickets and listens for `rf
 2. Stop the API process. The **RFP tickets** block shows **Reconnecting…**. Rows already listed stay on screen.
 3. Start the API. From a second signed-in session, upload a PDF at http://localhost:3001/rfp and wait until intake accepts it.
 4. On the first tab, confirm **Reconnecting…** clears and that institution appears once, with its country, program type, and **Needs processing**. A ticket accepted while this tab was disconnected is recovered from the ticket list and is not shown twice.
+
+## Desk chat (10.6)
+
+`/knowledge` talks to `WS /agent/chat` on the API (default `ws://127.0.0.1:8000`). The browser sends the same JWT on the query string.
+
+1. Sign in and open http://localhost:3001/knowledge.
+2. Ask a question. The answer should grow as tokens arrive, not appear all at once.
+3. Before it finishes, send a second question. The first bubble stays, marked **Interrupted**, and the next answer is a new bubble.
+4. Reload the page. The same thread comes back, including the interrupted reply.
 
 ## BFF proxy pattern
 

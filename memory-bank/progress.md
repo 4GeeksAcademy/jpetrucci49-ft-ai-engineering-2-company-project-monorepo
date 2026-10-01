@@ -336,6 +336,14 @@ _Last updated: SSE ticket notices (10.5) aligned to the accepted-ticket event_
 - [x] Backoffice `/` shows institution, country, and program type, streams `/api/rfp/events` with `authFetch`, and dedupes on `ticket_id`
 - [x] Tests: `tests/pipelines/test_rfp_sse.py`
 
+### Desk chat WebSocket (10.6)
+
+- [x] Spec: `specs/10.6_WEBSOCKET_SPECS.md`. Not the operator pause/resume/cancel flow in `context/10.6_CONTEXT.md`
+- [x] `WS /agent/chat` streams `compliance_assistant` / `chat_session` tokens; interrupt aborts the HTTP stream and keeps the partial reply
+- [x] One generation per `session_id` fans out to every socket; reconnect sends that session’s history
+- [x] Desk page `/knowledge` renders tokens as they arrive
+- [x] Tests: `tests/pipelines/test_agent_ws.py`
+
 ## In progress
 
 _None._
