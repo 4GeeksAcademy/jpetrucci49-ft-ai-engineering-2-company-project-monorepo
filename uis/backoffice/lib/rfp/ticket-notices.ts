@@ -1,6 +1,11 @@
 export type RfpTicketNotice = {
   ticket_id: string;
+  rfp_id: string | null;
+  client_name: string | null;
+  client_country: string | null;
+  program_type: string | null;
   status: string;
+  created_at: string;
 };
 
 export const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 16000, 30000];
@@ -33,11 +38,19 @@ export function parseTicketEvent(frame: string): RfpTicketNotice | null {
       dataLines.push(line.slice("data:".length).trim());
     }
   }
-  if (eventName !== "agent_status_changed" || dataLines.length === 0) return null;
+  if (eventName !== "rfp_ticket_created" || dataLines.length === 0) return null;
   try {
     const payload = JSON.parse(dataLines.join("\n")) as Partial<RfpTicketNotice>;
     if (!payload.ticket_id || !payload.status) return null;
-    return { ticket_id: payload.ticket_id, status: payload.status };
+    return {
+      ticket_id: payload.ticket_id,
+      rfp_id: typeof payload.rfp_id === "string" ? payload.rfp_id : null,
+      client_name: typeof payload.client_name === "string" ? payload.client_name : null,
+      client_country: typeof payload.client_country === "string" ? payload.client_country : null,
+      program_type: typeof payload.program_type === "string" ? payload.program_type : null,
+      status: payload.status,
+      created_at: typeof payload.created_at === "string" ? payload.created_at : "",
+    };
   } catch {
     return null;
   }

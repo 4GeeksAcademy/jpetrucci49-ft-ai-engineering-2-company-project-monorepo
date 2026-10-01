@@ -1,4 +1,4 @@
-"""SSE notice when an RFP ticket row is committed. No model calls."""
+"""SSE notice when intake accepts an RFP ticket. No model calls."""
 
 from __future__ import annotations
 
@@ -93,46 +93,88 @@ def test_events_require_a_token(sse_api) -> None:
     assert asyncio.run(_request()) == 401
 
 
-def test_stream_frame_after_create_ticket(sse_api) -> None:
+def test_stream_frame_after_ticket_accepted(sse_api) -> None:
     app, headers, engine = sse_api
-    content_type, body = asyncio.run(asyncio.wait_for(_open_stream(app, headers, engine), timeout=10))
+    content_type, body, accepted = asyncio.run(
+        asyncio.wait_for(_open_stream(app, headers, engine), timeout=10)
+    )
     assert "text/event-stream" in content_type
-    assert "event: agent_status_changed" in body
+    assert "event: rfp_ticket_created" in body
+    assert "agent_status_changed" not in body
     payload = _data_payload(body)
-    assert set(payload) == {"agent_id", "flow_id", "flow_type", "ticket_id", "status"}
+    assert set(payload) == {
+        "ticket_id",
+        "rfp_id",
+        "client_name",
+        "client_country",
+        "program_type",
+        "status",
+        "created_at",
+    }
+    assert payload["ticket_id"] == accepted["ticket_id"]
+    assert payload["rfp_id"] == accepted["rfp_id"]
+    assert payload["client_name"] == "Westbrook Manufacturing"
+    assert payload["client_country"] == "US"
+    assert payload["program_type"] == "occupational_health"
     assert payload["status"] == "analyzing"
-    assert payload["agent_id"] == "rfp_pipeline"
-    assert payload["flow_type"] == "rfp_workflow"
-    assert payload["flow_id"] == payload["ticket_id"]
-    assert payload["ticket_id"]
+    assert payload["created_at"].endswith("Z")
 
 
-def test_ticket_created_with_no_subscriber_is_listed(sse_api) -> None:
+def test_discarded_ticket_is_listed_and_not_an_event(sse_api) -> None:
     app, headers, engine = sse_api
+    import queue
+
+    from rfp.events import subscribe, unsubscribe
     from rfp.service import create_ticket
 
-    with Session(engine) as session:
-        created = create_ticket(session, pdf_bytes=PDF, created_by="1")
+    subscriber = subscribe()
+    try:
+        with Session(engine) as session:
+            discarded = create_ticket(session, pdf_bytes=PDF, created_by="1")
+        _discard(discarded.ticket_id)
+        with pytest.raises(queue.Empty):
+            subscriber.get_nowait()
+    finally:
+        unsubscribe(subscriber)
 
-    async def _request() -> dict:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/rfp/tickets", headers=headers)
-            assert response.status_code == 200
-            return response.json()
+    accepted = _accept(engine)
+    listed = asyncio.run(_list_tickets(app, headers))
+    by_id = {row["ticket_id"]: row for row in listed["tickets"]}
+    assert set(by_id[discarded.ticket_id]) == _NOTICE_FIELDS
+    assert by_id[discarded.ticket_id]["status"] == "discarded"
+    assert by_id[discarded.ticket_id]["rfp_id"] is None
+    assert set(by_id[accepted["ticket_id"]]) == _NOTICE_FIELDS
+    assert by_id[accepted["ticket_id"]]["status"] == "intake_complete"
+    assert by_id[accepted["ticket_id"]]["client_name"] == "Westbrook Manufacturing"
+    assert by_id[accepted["ticket_id"]]["rfp_id"] == accepted["rfp_id"]
 
-    body = asyncio.run(_request())
-    assert body["tickets"]
-    notice = next(row for row in body["tickets"] if row["ticket_id"] == created.ticket_id)
-    assert notice == {"ticket_id": created.ticket_id, "status": "analyzing"}
+
+_NOTICE_FIELDS = {
+    "ticket_id",
+    "rfp_id",
+    "client_name",
+    "client_country",
+    "program_type",
+    "status",
+    "created_at",
+}
 
 
-async def _open_stream(app, headers: dict[str, str], engine) -> tuple[str, str]:
-    """Read the live SSE response until create_ticket publishes one frame."""
+async def _list_tickets(app, headers: dict[str, str]) -> dict:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/rfp/tickets", headers=headers)
+        assert response.status_code == 200
+        return response.json()
+
+
+async def _open_stream(app, headers: dict[str, str], engine) -> tuple[str, str, dict]:
+    """Read the live SSE response until persist_complete publishes one frame."""
     started = asyncio.Event()
     finished = asyncio.Event()
     response_headers: dict[str, str] = {}
     chunks: list[bytes] = []
+    accepted: dict = {}
 
     scope = {
         "type": "http",
@@ -160,26 +202,52 @@ async def _open_stream(app, headers: dict[str, str], engine) -> tuple[str, str]:
             started.set()
         elif message["type"] == "http.response.body":
             chunks.append(message.get("body") or b"")
-            if b"event: agent_status_changed" in b"".join(chunks):
+            if b"event: rfp_ticket_created" in b"".join(chunks):
                 finished.set()
 
     async def publish_once_open() -> None:
         await started.wait()
-        await asyncio.to_thread(_create_ticket, engine)
+        accepted.update(await asyncio.to_thread(_accept, engine))
 
     stream = asyncio.create_task(app(scope, receive, send))
     publisher = asyncio.create_task(publish_once_open())
     await finished.wait()
     await publisher
     await stream
-    return response_headers["content-type"], b"".join(chunks).decode()
+    return response_headers["content-type"], b"".join(chunks).decode(), accepted
 
 
-def _create_ticket(engine) -> None:
+def _accept(engine) -> dict[str, str]:
     from rfp.service import create_ticket
 
     with Session(engine) as session:
-        create_ticket(session, pdf_bytes=PDF, created_by="1")
+        created = create_ticket(session, pdf_bytes=PDF, created_by="1")
+    from data.pipelines.rfp_intake.persist import persist_complete
+
+    persist_complete(
+        created.ticket_id,
+        metadata={
+            "client_name": "Westbrook Manufacturing",
+            "client_country": "US",
+            "program_type": "occupational_health",
+        },
+        worker_results={},
+        handoff={},
+        phi_detected=False,
+    )
+    with Session(engine) as session:
+        from rfp.models import RfpTicket
+
+        ticket = session.get(RfpTicket, created.ticket_id)
+        assert ticket is not None
+        assert ticket.rfp_id
+        return {"ticket_id": ticket.ticket_id, "rfp_id": ticket.rfp_id}
+
+
+def _discard(ticket_id: str) -> None:
+    from data.pipelines.rfp_intake.persist import persist_discarded
+
+    persist_discarded(ticket_id, "not_an_rfp")
 
 
 def _data_payload(body: str) -> dict:

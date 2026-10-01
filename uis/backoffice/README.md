@@ -65,12 +65,12 @@ API-level curl tests: [`services/api/README.md`](../../services/api/README.md#te
 
 ## RFP ticket notices (10.5)
 
-The operations dashboard at `/` lists the newest RFP tickets and listens for `agent_status_changed` through `/api/rfp/events`. The browser never calls port 8000.
+The operations dashboard at `/` lists the newest RFP tickets and listens for `rfp_ticket_created` through `/api/rfp/events`. The browser never calls port 8000. A notice is sent when intake accepts the document, not when the PDF is uploaded. Each row shows the institution (or the ticket id when the name is missing), country, program type, and **Needs processing** while the notice status is `analyzing`.
 
 1. Sign in at http://localhost:3001/login and open http://localhost:3001/.
 2. Stop the API process. The **RFP tickets** block shows **Reconnecting…**. Rows already listed stay on screen.
-3. Start the API. From a second signed-in session, upload a PDF at http://localhost:3001/rfp.
-4. On the first tab, confirm **Reconnecting…** clears and that `ticket_id` appears once, labeled **Needs processing**.
+3. Start the API. From a second signed-in session, upload a PDF at http://localhost:3001/rfp and wait until intake accepts it.
+4. On the first tab, confirm **Reconnecting…** clears and that institution appears once, with its country, program type, and **Needs processing**. A ticket accepted while this tab was disconnected is recovered from the ticket list and is not shown twice.
 
 ## BFF proxy pattern
 

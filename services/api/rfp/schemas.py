@@ -14,7 +14,12 @@ class TicketCreated(BaseModel):
 
 class TicketNotice(BaseModel):
     ticket_id: str
+    rfp_id: str | None = None
+    client_name: str | None = None
+    client_country: str | None = None
+    program_type: str | None = None
     status: str
+    created_at: str
 
 
 class TicketNoticeList(BaseModel):
