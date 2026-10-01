@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from agent.memory.phi import contains_phi
 from data.pipelines.rfp_intake.workers import DEPARTMENT_OWNERS
+from rfp.events import format_created_at, publish_rfp_ticket_created
 from rfp.models import RfpDepartmentSection, RfpMetadata, RfpTicket, utc_now
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,7 @@ def persist_complete(
     phi_detected: bool,
 ) -> None:
     session = _open_session()
+    notice: dict[str, str | None] | None = None
     try:
         ticket = session.get(RfpTicket, ticket_id)
         if ticket is None:
@@ -123,8 +125,19 @@ def persist_complete(
             safe_handoff = _scrub(handoff)
             logger.warning("rfp persist scrubbed residual PHI markers ticket_id=%s", ticket_id)
 
-        _upsert_metadata(session, ticket, metadata)
+        metadata_row = _upsert_metadata(session, ticket, metadata)
         _upsert_sections(session, ticket_id, worker_results, phi_detected=phi_detected)
+        # Freeze the notice while the ticket is still analyzing. Send it only after
+        # commit so a rolled-back write does not reach the dashboard.
+        notice = {
+            "ticket_id": ticket.ticket_id,
+            "rfp_id": ticket.rfp_id,
+            "client_name": metadata_row.client_name if isinstance(metadata_row.client_name, str) else None,
+            "client_country": metadata_row.client_country,
+            "program_type": metadata_row.program_type,
+            "status": ticket.status,
+            "created_at": format_created_at(ticket.created_at),
+        }
 
         ticket.status = "intake_complete"
         ticket.discard_reason = None
@@ -136,9 +149,12 @@ def persist_complete(
         session.commit()
     except Exception:
         session.rollback()
+        notice = None
         raise
     finally:
         session.close()
+    if notice is not None:
+        publish_rfp_ticket_created(notice)
 
 
 def load_ticket_pdf_path(ticket_id: str) -> str:

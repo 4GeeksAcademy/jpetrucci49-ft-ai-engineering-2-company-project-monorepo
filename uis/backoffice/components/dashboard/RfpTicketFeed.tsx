@@ -71,7 +71,7 @@ export function RfpTicketFeed() {
         </h3>
         {reconnecting ? <p className="text-sm font-medium text-amber-800">Reconnecting…</p> : null}
       </div>
-      <p className="mt-1 text-sm text-slate-600">New institutional requests, as they are registered.</p>
+      <p className="mt-1 text-sm text-slate-600">New institutional requests, as intake accepts them.</p>
       {tickets.length === 0 ? (
         <p className="mt-4 text-sm text-slate-600">No RFP tickets yet.</p>
       ) : (
@@ -82,8 +82,15 @@ export function RfpTicketFeed() {
                 href="/rfp"
                 className="flex items-center justify-between gap-4 py-3 text-sm text-slate-900 hover:underline"
               >
-                <span className="font-mono">{ticket.ticket_id}</span>
-                <span>{ticketStatusLabel(ticket.status)}</span>
+                <span className="min-w-0">
+                  <span className={ticket.client_name ? "font-medium" : "font-mono"}>
+                    {ticket.client_name ?? ticket.ticket_id}
+                  </span>
+                  <span className="mt-0.5 block text-slate-600">
+                    {[ticket.client_country, ticket.program_type].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="shrink-0">{ticketStatusLabel(ticket.status)}</span>
               </Link>
             </li>
           ))}

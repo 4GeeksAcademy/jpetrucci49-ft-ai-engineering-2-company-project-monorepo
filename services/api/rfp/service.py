@@ -11,7 +11,7 @@ from data.pipelines.paths import RAW_DIR
 from data.pipelines.rfp_intake.persist import persist_pipeline_error
 from data.pipelines.rfp_intake.workers import DEPARTMENT_OWNERS
 from rfp.models import RfpDepartmentSection, RfpMetadata, RfpTicket, utc_now
-from rfp.events import publish_ticket_created
+from rfp.events import format_created_at
 from rfp.schemas import (
     DepartmentSectionOut,
     RfpMetadataOut,
@@ -49,16 +49,30 @@ def create_ticket(session: Session, *, pdf_bytes: bytes, created_by: str) -> Tic
     session.add(ticket)
     session.commit()
     session.refresh(ticket)
-    publish_ticket_created(ticket.ticket_id, ticket.status)
     return TicketCreated(ticket_id=ticket.ticket_id, status=ticket.status)
 
 
 def list_recent_tickets(session: Session, *, limit: int = 20) -> TicketNoticeList:
-    """Newest committed tickets. This table is the record when nobody was listening."""
-    statement = select(RfpTicket).order_by(RfpTicket.created_at.desc()).limit(limit)
+    """Newest tickets. This table is the record when nobody was listening."""
+    statement = (
+        select(RfpTicket, RfpMetadata)
+        .join(RfpMetadata, RfpMetadata.ticket_id == RfpTicket.ticket_id, isouter=True)
+        .order_by(RfpTicket.created_at.desc())
+        .limit(limit)
+    )
     rows = session.exec(statement).all()
-    return TicketNoticeList(
-        tickets=[TicketNotice(ticket_id=row.ticket_id, status=row.status) for row in rows]
+    return TicketNoticeList(tickets=[_notice(ticket, meta) for ticket, meta in rows])
+
+
+def _notice(ticket: RfpTicket, meta: RfpMetadata | None) -> TicketNotice:
+    return TicketNotice(
+        ticket_id=ticket.ticket_id,
+        rfp_id=ticket.rfp_id,
+        client_name=meta.client_name if meta is not None else None,
+        client_country=meta.client_country if meta is not None else None,
+        program_type=meta.program_type if meta is not None else None,
+        status=ticket.status,
+        created_at=format_created_at(ticket.created_at),
     )
 
 
