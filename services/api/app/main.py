@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.core.config import get_cors_origin_regex, get_cors_origins
+from app.core.config import expose_api_docs, get_cors_origin_regex, get_cors_origins
 from app.incidents.manager_router import router as incident_manager_router
 from app.incidents.router import router as incidents_router
 from auth.config import get_jwt_secret, validate_password_reset_config
@@ -52,11 +52,15 @@ async def lifespan(_: FastAPI):
     yield
 
 
+_docs = expose_api_docs()
 app = FastAPI(
     title="HealthCore API",
     description="Internal API for HealthCore Digital operations tools.",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
 )
 
 _origins = get_cors_origins()

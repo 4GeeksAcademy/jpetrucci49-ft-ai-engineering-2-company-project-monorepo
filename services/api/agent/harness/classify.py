@@ -12,7 +12,8 @@ from agent.tools.inventory import is_stock_ask
 InputLabel = Literal["injection", "phi", "personal", "sensitive", "casual", "domain"]
 
 _INJECTION = re.compile(
-    r"(?:ignore(?:\s+\w+){0,4}\s+(?:instructions|rules|prompt)|"
+    r"(?:ignore(?:\s+\w+){0,4}\s+(?:instructions|rules|policies|prompt)|"
+    r"reveal a patient identifier|"
     r"act as (?:an )?assistant with no|"
     r"you (?:are|have) now (?:an )?assistant with no rules|"
     r"you (?:are|have) no (?:compliance )?rules|"

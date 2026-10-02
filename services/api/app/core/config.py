@@ -16,6 +16,11 @@ def get_cors_origins() -> list[str]:
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
 
 
+def expose_api_docs() -> bool:
+    """OpenAPI UI stays off unless a local operator sets HEALTHCORE_EXPOSE_DOCS=1."""
+    return os.getenv("HEALTHCORE_EXPOSE_DOCS", "").strip() == "1"
+
+
 def get_cors_origin_regex() -> str | None:
     """Match Codespaces / GitHub Codespaces forwarded URLs."""
     return os.getenv(

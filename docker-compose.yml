@@ -2,7 +2,7 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.13.6
     ports:
-      - "6333:6333"
+      - "127.0.0.1:6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -21,7 +21,7 @@ services:
       PYTHONPATH: /opt/healthcore:/app
       QDRANT_URL: http://qdrant:6333
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     depends_on:
@@ -80,8 +80,8 @@ services:
       - website_next:/app/website/.next
       - backoffice_next:/app/backoffice/.next
     ports:
-      - "3000:3000"
-      - "3001:3001"
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3001"
     env_file:
       - .env
     depends_on:

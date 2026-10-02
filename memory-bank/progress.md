@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: Desk chat WebSocket (10.6) event frames_
+_Last updated: OWASP audit and host hardening (11.5)_
 
 ## Completed
 
@@ -343,6 +343,13 @@ _Last updated: Desk chat WebSocket (10.6) event frames_
 - [x] One producer on `chat.<session_id>` fans out to every socket; reconnect sends `session_snapshot`
 - [x] Desk page `/knowledge` appends each token and sends `interrupt_requested` while a reply is in progress
 - [x] Tests: `tests/pipelines/test_agent_ws.py`
+
+### OWASP audit and host hardening (11.5)
+
+- [x] Spec: `specs/11.5_OWASP_SPECS.md`; report: `docs/security/11.5_OWASP_AUDIT.md`
+- [x] Root SSH off; firewall default-deny; Qdrant and API published on `127.0.0.1`; API image is non-root
+- [x] OpenAPI docs off unless `HEALTHCORE_EXPOSE_DOCS=1`; compliance agent refuses an instruction to reveal a patient identifier
+- [x] Thirty findings (10 categories × backend, frontend, agentic). No open critical item
 
 ## In progress
 
