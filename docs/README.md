@@ -12,7 +12,8 @@ This folder holds **cross-cutting documentation** for the monorepo: architecture
 ## Security
 
 - [security/11.5_OWASP_AUDIT.md](./security/11.5_OWASP_AUDIT.md) — OWASP Top 10:2025 audit
-- [security/12_NIST/README.md](./security/12_NIST/README.md) — model input map and AI-system inventory (NIST report follows)
+- [security/12_NIST/README.md](./security/12_NIST/README.md) — model input map and AI-system inventory
+- [security/12_NIST/REPORT.md](./security/12_NIST/REPORT.md) — NIST CSF 2.0 six-function report
 
 ## Observability
 

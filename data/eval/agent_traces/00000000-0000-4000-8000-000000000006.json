@@ -1,7 +1,6 @@
 {
   "run_id": "00000000-0000-4000-8000-000000000006",
   "path": ["intake", "classify", "lookup_incident", "refuse_incident"],
-  "question": "What is the status of ticket 12?",
   "intent": "incident",
   "sources_used": ["incident"],
   "context_sources": [],
@@ -9,6 +8,5 @@
   "incident_error": "timeout",
   "supply_skus": [],
   "inventory_error": null,
-  "answer": "I couldn't confirm that ticket's status right now",
   "error": null
 }

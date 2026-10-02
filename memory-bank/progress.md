@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: NIST input map started (12)_
+_Last updated: NIST CSF 2.0 report and urgent AI protections (12)_
 
 ## Completed
 
@@ -351,13 +351,13 @@ _Last updated: NIST input map started (12)_
 - [x] OpenAPI docs off unless `HEALTHCORE_EXPOSE_DOCS=1`; compliance agent refuses an instruction to reveal a patient identifier
 - [x] Thirty findings (10 categories × backend, frontend, agentic). No open critical item
 
-## In progress
-
 ### Secure practices for AI (12)
 
-- [x] Input map and inventory: `docs/security/12_NIST/README.md`
-- [ ] Spec: `specs/12_NIST_SPECS.md` (drafted; implementation not started)
-- [ ] Six-function report and the critical fixes in that spec
+- [x] Spec: `specs/12_NIST_SPECS.md`; inventory: `docs/security/12_NIST/README.md`; report: `docs/security/12_NIST/REPORT.md`
+- [x] RFP upload is data: instruction override skips the model; untrusted markers; model `is_rfp: true` cannot override fallback `false`
+- [x] Output guard refuses the embedded medication instruction with the existing leak refusal
+- [x] Desk traces and the eight fixtures record the action only (no question or answer text)
+- [x] `POST /agent/query` limited to 10 requests / 60 seconds per user, then HTTP 429. Chat WebSocket and `POST /knowledge/query` stay unlimited
 
 ## Planned next
 

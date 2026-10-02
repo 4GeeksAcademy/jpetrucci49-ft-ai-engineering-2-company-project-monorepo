@@ -134,8 +134,7 @@ def retrieve(
         payload["score"] = score
         results.append(payload)
     logger.debug(
-        "retrieve query=%r k=%s min_score=%s kept=%s sources=%s",
-        query[:80],
+        "retrieve k=%s min_score=%s kept=%s sources=%s",
         k,
         floor,
         len(results),

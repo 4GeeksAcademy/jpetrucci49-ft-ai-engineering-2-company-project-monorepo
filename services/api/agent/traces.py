@@ -1,4 +1,4 @@
-"""Persist queryable per-run traces. No chunk text, no ticket descriptions."""
+"""Persist queryable per-run traces. Action and reason only: no question, answer, or chunk text."""
 
 from __future__ import annotations
 
@@ -75,7 +75,6 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
     return {
         "run_id": state.get("run_id", ""),
         "path": path,
-        "question": state.get("question", ""),
         "intent": state.get("intent") or None,
         "sources_used": sources_used(path),
         "context_sources": [
@@ -87,7 +86,6 @@ def build_trace(state: DeskAgentState) -> dict[str, Any]:
         "incident_error": result.get("error"),
         "supply_skus": supply_skus,
         "inventory_error": inventory.get("error"),
-        "answer": state.get("answer", ""),
         "error": error or None,
         "memory_proposal_id": state.get("memory_proposal_id") or None,
         "memory_outcome": state.get("memory_outcome") or None,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -234,7 +234,9 @@ def test_eval_path_retrieve_before_generate() -> None:
     trace = _load_fixture(CANCEL_ID)
     path = trace["path"]
     assert path.index("retrieve_policy") < path.index("generate_policy")
-    assert "Is there a charge for cancelling 12 hours in advance?" in trace["question"]
+    assert trace["intent"] == "rag"
+    assert "question" not in trace
+    assert "answer" not in trace
 
 
 def test_eval_path_empty_skips_retrieve() -> None:
@@ -248,17 +250,18 @@ def test_eval_path_no_hits_refuses() -> None:
     trace = _load_fixture(WEATHER_ID)
     assert trace["path"][-1] == "refuse"
     assert "generate_policy" not in trace["path"]
-    answer = trace["answer"].lower()
-    assert "don't have" in answer or "enough information" in answer
+    assert trace["intent"] == "rag"
+    assert trace["context_sources"] == []
+    assert "answer" not in trace
 
 
 def test_eval_grounded_no_show_medicare() -> None:
     trace = _load_fixture(MEDICARE_ID)
-    answer = trace["answer"].lower()
-    assert "50" not in answer and "40" not in answer
-    assert "not charged" in answer or "not" in answer
-    assert "appointment-policy" in trace["context_sources"] or "not charged" in answer
-    assert "medicare" in answer or "medicaid" in answer
+    path = trace["path"]
+    assert path.index("retrieve_policy") < path.index("generate_policy")
+    assert trace["intent"] == "rag"
+    assert trace["context_sources"] == ["appointment-policy"]
+    assert "answer" not in trace
 
 
 def test_eval_route_tool_not_rag() -> None:
@@ -266,10 +269,9 @@ def test_eval_route_tool_not_rag() -> None:
     assert "lookup_incident" in trace["path"]
     assert "retrieve_policy" not in trace["path"]
     assert trace["sources_used"] == ["incident"]
-    answer = trace["answer"].lower()
-    assert "ticket 12" in answer
-    assert "cancel" not in answer
-    assert "medicare" not in answer
+    assert trace["intent"] == "incident"
+    assert trace["incident_ids"] == [12]
+    assert "answer" not in trace
 
 
 def test_eval_route_rag_not_tool() -> None:
@@ -285,8 +287,9 @@ def test_eval_route_inventory_not_rag() -> None:
     assert "lookup_inventory" in trace["path"]
     assert "retrieve_policy" not in trace["path"]
     assert trace["sources_used"] == ["inventory"]
-    assert re.search(r"\d+", trace["answer"])
-    assert "cancel" not in trace["answer"].lower()
+    assert trace["intent"] == "inventory"
+    assert trace["supply_skus"] == ["HCR-PPE-001"]
+    assert "answer" not in trace
 
 
 def test_eval_route_rag_not_inventory() -> None:
@@ -298,20 +301,19 @@ def test_eval_route_rag_not_inventory() -> None:
 def test_eval_route_inventory_fallback() -> None:
     trace = _load_fixture(STOCK_FALLBACK_ID)
     assert "lookup_inventory" in trace["path"]
+    assert "refuse_inventory" in trace["path"]
     assert trace["inventory_error"] in {"timeout", "unavailable", "not_found"}
-    assert "couldn't confirm that supply's stock right now" in trace["answer"].lower()
-    assert not re.search(r"\b\d+\b", trace["answer"])
+    assert trace["supply_skus"] == []
+    assert "answer" not in trace
 
 
 def test_eval_route_tool_fallback() -> None:
     trace = _load_fixture(FALLBACK_ID)
     assert "lookup_incident" in trace["path"]
+    assert "refuse_incident" in trace["path"]
     assert trace["incident_error"] in {"timeout", "unavailable", "not_found"}
-    assert "couldn't confirm that ticket's status right now" in trace["answer"].lower()
-    assert "open" not in trace["answer"].lower()
-    assert "in_progress" not in trace["answer"].lower()
-    assert "resolved" not in trace["answer"].lower()
-    assert "discarded" not in trace["answer"].lower()
+    assert trace["incident_ids"] == []
+    assert "answer" not in trace
 
 
 def test_mocked_empty_question_writes_reject_trace(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -388,7 +390,8 @@ def test_mocked_ticket_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) ->
     saved = load_trace(run_id)
     assert saved is not None
     assert saved["incident_error"] == "timeout"
-    assert "open" not in saved["answer"].lower()
+    assert "question" not in saved
+    assert "answer" not in saved
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
 
 
@@ -427,8 +430,78 @@ def test_mocked_stock_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) -> 
     saved = load_trace(run_id)
     assert saved is not None
     assert saved["inventory_error"] == "timeout"
-    assert "40" not in saved["answer"]
+    assert "question" not in saved
+    assert "answer" not in saved
     (traces_dir() / f"{run_id}.json").unlink(missing_ok=True)
+
+
+def test_build_trace_omits_question_and_answer() -> None:
+    from agent.traces import build_trace
+
+    payload = build_trace(
+        {
+            "run_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "path": ["intake", "guard_input", "classify", "retrieve_policy"],
+            "question": "synthetic staff question",
+            "answer": "synthetic answer text",
+            "intent": "rag",
+            "error": "",
+            "guardrail_name": "output_leak",
+        }
+    )
+    assert payload["intent"] == "rag"
+    assert payload["guardrail"] == {"type": "security", "name": "output_leak"}
+    blob = json.dumps(payload)
+    assert "question" not in payload
+    assert "answer" not in payload
+    assert "synthetic staff question" not in blob
+    assert "synthetic answer text" not in blob
+
+
+def test_agent_query_rate_limit_does_not_call_the_graph(monkeypatch: pytest.MonkeyPatch) -> None:
+    from fastapi import HTTPException
+
+    from agent.rate_limit import RATE_LIMIT_DETAIL, reset_agent_query_limits
+    from agent.router import AgentQueryIn, agent_query
+    from auth.models import UserPublic, UserRole
+
+    reset_agent_query_limits()
+    clock = {"t": 1_000.0}
+    monkeypatch.setattr("agent.rate_limit._now", lambda: clock["t"])
+    calls = {"n": 0}
+
+    def _fake(question: str, user_id: int | None = None):
+        calls["n"] += 1
+        return {
+            "answer": "policy line",
+            "run_id": "99999999-9999-4999-8999-999999999999",
+            "error": "",
+        }
+
+    monkeypatch.setattr("agent.router.run_desk_agent", _fake)
+    question = "What is the cancellation charge for a private-pay visit?"
+    user = UserPublic(
+        id=7,
+        email="desk-limit@example.com",
+        is_active=True,
+        role=UserRole.user,
+        created_at=datetime.now(timezone.utc),
+    )
+    other = user.model_copy(update={"id": 8})
+    for _ in range(10):
+        agent_query(AgentQueryIn(question=question), user)
+    with pytest.raises(HTTPException) as exc:
+        agent_query(AgentQueryIn(question=question), user)
+    assert exc.value.status_code == 429
+    assert exc.value.detail == RATE_LIMIT_DETAIL
+    assert question not in str(exc.value.detail)
+    assert calls["n"] == 10
+    agent_query(AgentQueryIn(question=question), other)
+    assert calls["n"] == 11
+    clock["t"] = 1_061.0
+    agent_query(AgentQueryIn(question=question), user)
+    assert calls["n"] == 12
+    reset_agent_query_limits()
 
 
 def test_agent_incidents_via_mcp(monkeypatch: pytest.MonkeyPatch) -> None:

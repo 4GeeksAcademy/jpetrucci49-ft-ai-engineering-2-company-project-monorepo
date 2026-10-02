@@ -1,7 +1,6 @@
 {
   "run_id": "00000000-0000-4000-8000-000000000002",
   "path": ["intake", "reject"],
-  "question": "",
   "intent": null,
   "sources_used": [],
   "context_sources": [],
@@ -9,6 +8,5 @@
   "incident_error": null,
   "supply_skus": [],
   "inventory_error": null,
-  "answer": "",
   "error": "question must not be empty"
 }

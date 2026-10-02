@@ -12,6 +12,7 @@ from agent.chat import serve_chat
 from agent.graph import run_desk_agent
 from agent.harness.observe import summary as guardrail_summary
 from agent.nodes import EMPTY_QUESTION
+from agent.rate_limit import RATE_LIMIT_DETAIL, allow_agent_query
 from agent.traces import load_trace
 from auth.dependencies import get_current_user
 from auth.models import UserPublic
@@ -40,6 +41,8 @@ def agent_query(
     body: AgentQueryIn,
     user: Annotated[UserPublic, Depends(get_current_user)],
 ) -> AgentQueryOut:
+    if not allow_agent_query(user.id):
+        raise HTTPException(status_code=429, detail=RATE_LIMIT_DETAIL)
     try:
         result = run_desk_agent(body.question, user_id=user.id)
     except RuntimeError as exc:

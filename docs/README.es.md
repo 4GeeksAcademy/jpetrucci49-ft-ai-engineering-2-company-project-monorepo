@@ -9,3 +9,4 @@ Esta carpeta contiene la **documentación transversal** del monorepo: guías de 
 
 - [security/11.5_OWASP_AUDIT.md](./security/11.5_OWASP_AUDIT.md) — auditoría OWASP Top 10:2025
 - [security/12_NIST/README.md](./security/12_NIST/README.md) — mapa de entradas al modelo e inventario de sistemas de IA
+- [security/12_NIST/REPORT.md](./security/12_NIST/REPORT.md) — informe NIST CSF 2.0 (seis funciones)

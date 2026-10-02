@@ -1,7 +1,6 @@
 {
   "run_id": "00000000-0000-4000-8000-000000000003",
   "path": ["intake", "classify", "retrieve_policy", "refuse"],
-  "question": "What is the weather in Austin tomorrow?",
   "intent": "rag",
   "sources_used": ["rag"],
   "context_sources": [],
@@ -9,6 +8,5 @@
   "incident_error": null,
   "supply_skus": [],
   "inventory_error": null,
-  "answer": "I don't have enough information in the HealthCore knowledge base to answer that reliably. Please check with billing (Tom Callahan) or clinical operations rather than guessing coverage, fees, or timeframes.",
   "error": null
 }
