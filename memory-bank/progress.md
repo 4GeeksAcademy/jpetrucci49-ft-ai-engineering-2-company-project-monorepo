@@ -1,6 +1,6 @@
 # HealthCore Monorepo — Progress
 
-_Last updated: OWASP audit and host hardening (11.5)_
+_Last updated: NIST input map started (12)_
 
 ## Completed
 
@@ -353,7 +353,11 @@ _Last updated: OWASP audit and host hardening (11.5)_
 
 ## In progress
 
-_None._
+### Secure practices for AI (12)
+
+- [x] Input map and inventory: `docs/security/12_NIST/README.md`
+- [ ] Spec: `specs/12_NIST_SPECS.md` (drafted; implementation not started)
+- [ ] Six-function report and the critical fixes in that spec
 
 ## Planned next
 
