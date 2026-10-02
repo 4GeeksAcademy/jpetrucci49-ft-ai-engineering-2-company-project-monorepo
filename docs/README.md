@@ -9,6 +9,11 @@ This folder holds **cross-cutting documentation** for the monorepo: architecture
 
 - [ARCHITECTURE_PROPOSAL.md](./ARCHITECTURE_PROPOSAL.md) — HealthCore backend pattern, FastAPI structure, domain routers, monorepo FE/BE considerations
 
+## Security
+
+- [security/11.5_OWASP_AUDIT.md](./security/11.5_OWASP_AUDIT.md) — OWASP Top 10:2025 audit
+- [security/12_NIST/README.md](./security/12_NIST/README.md) — model input map and AI-system inventory (NIST report follows)
+
 ## Observability
 
 - [telemetry/telemetry-plan.md](./telemetry/telemetry-plan.md) — Telemetry Plan (catalogue, envelope, delivery)
