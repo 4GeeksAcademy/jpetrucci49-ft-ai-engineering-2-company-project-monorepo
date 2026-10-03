@@ -31,6 +31,15 @@ def allow_agent_query(user_id: int, *, now: float | None = None) -> bool:
         return True
 
 
+def enforce_agent_query_limit(user_id: int) -> None:
+    """Stop POST /agent/query before the graph runs. The detail never includes the question."""
+    if allow_agent_query(user_id):
+        return
+    from fastapi import HTTPException
+
+    raise HTTPException(status_code=429, detail=RATE_LIMIT_DETAIL)
+
+
 def reset_agent_query_limits() -> None:
     with _lock:
         _hits.clear()

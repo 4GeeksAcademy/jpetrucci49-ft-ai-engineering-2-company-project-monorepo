@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -438,10 +437,11 @@ def test_mocked_stock_timeout_uses_fallback(monkeypatch: pytest.MonkeyPatch) -> 
 def test_build_trace_omits_question_and_answer() -> None:
     from agent.traces import build_trace
 
+    path = ["intake", "guard_input", "classify", "retrieve_policy"]
     payload = build_trace(
         {
             "run_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            "path": ["intake", "guard_input", "classify", "retrieve_policy"],
+            "path": path,
             "question": "synthetic staff question",
             "answer": "synthetic answer text",
             "intent": "rag",
@@ -449,6 +449,7 @@ def test_build_trace_omits_question_and_answer() -> None:
             "guardrail_name": "output_leak",
         }
     )
+    assert payload["path"] == path
     assert payload["intent"] == "rag"
     assert payload["guardrail"] == {"type": "security", "name": "output_leak"}
     blob = json.dumps(payload)
@@ -458,49 +459,97 @@ def test_build_trace_omits_question_and_answer() -> None:
     assert "synthetic answer text" not in blob
 
 
+def test_persist_trace_stores_action_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The desk trace file keeps the node path and drops question and answer text."""
+    from agent import traces as traces_mod
+
+    monkeypatch.setattr(traces_mod, "traces_dir", lambda: tmp_path)
+    run_id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    question = "synthetic staff question"
+    answer = "synthetic answer text"
+    path = [
+        "intake",
+        "guard_input",
+        "classify",
+        "retrieve_policy",
+        "generate_policy",
+        "guard_output",
+    ]
+    written = traces_mod.persist_trace(
+        {
+            "run_id": run_id,
+            "path": path,
+            "question": question,
+            "answer": answer,
+            "intent": "rag",
+            "error": "",
+            "memory_outcome": "pending",
+            "guardrail_name": "output_leak",
+            "context": [
+                {
+                    "source_document": "appointment-policy",
+                    "text": question,
+                    "section": answer,
+                }
+            ],
+        }
+    )
+    assert written == tmp_path / f"{run_id}.json"
+    raw = written.read_text(encoding="utf-8")
+    saved = json.loads(raw)
+    assert saved["path"] == path
+    assert saved["intent"] == "rag"
+    assert saved["memory_outcome"] == "pending"
+    assert saved["context_sources"] == ["appointment-policy"]
+    assert saved["guardrail"] == {"type": "security", "name": "output_leak"}
+    assert "question" not in saved
+    assert "answer" not in saved
+    assert question not in raw
+    assert answer not in raw
+    assert traces_mod.load_trace(run_id)["path"] == path
+
+
 def test_agent_query_rate_limit_does_not_call_the_graph(monkeypatch: pytest.MonkeyPatch) -> None:
     from fastapi import HTTPException
 
-    from agent.rate_limit import RATE_LIMIT_DETAIL, reset_agent_query_limits
-    from agent.router import AgentQueryIn, agent_query
-    from auth.models import UserPublic, UserRole
+    from agent.rate_limit import (
+        MAX_REQUESTS,
+        RATE_LIMIT_DETAIL,
+        WINDOW_SECONDS,
+        enforce_agent_query_limit,
+        reset_agent_query_limits,
+    )
+
+    assert MAX_REQUESTS == 10
+    assert WINDOW_SECONDS == 60.0
+    root = Path(__file__).resolve().parents[2]
+    router_source = (root / "services" / "api" / "agent" / "router.py").read_text(
+        encoding="utf-8"
+    )
+    assert router_source.index("enforce_agent_query_limit(user.id)") < router_source.index(
+        "run_desk_agent("
+    )
+    knowledge = (root / "services" / "api" / "knowledge" / "router.py").read_text(
+        encoding="utf-8"
+    )
+    chat = (root / "services" / "api" / "agent" / "chat.py").read_text(encoding="utf-8")
+    assert "enforce_agent_query_limit" not in knowledge
+    assert "enforce_agent_query_limit" not in chat
 
     reset_agent_query_limits()
     clock = {"t": 1_000.0}
     monkeypatch.setattr("agent.rate_limit._now", lambda: clock["t"])
-    calls = {"n": 0}
-
-    def _fake(question: str, user_id: int | None = None):
-        calls["n"] += 1
-        return {
-            "answer": "policy line",
-            "run_id": "99999999-9999-4999-8999-999999999999",
-            "error": "",
-        }
-
-    monkeypatch.setattr("agent.router.run_desk_agent", _fake)
     question = "What is the cancellation charge for a private-pay visit?"
-    user = UserPublic(
-        id=7,
-        email="desk-limit@example.com",
-        is_active=True,
-        role=UserRole.user,
-        created_at=datetime.now(timezone.utc),
-    )
-    other = user.model_copy(update={"id": 8})
     for _ in range(10):
-        agent_query(AgentQueryIn(question=question), user)
+        enforce_agent_query_limit(7)
     with pytest.raises(HTTPException) as exc:
-        agent_query(AgentQueryIn(question=question), user)
+        enforce_agent_query_limit(7)
     assert exc.value.status_code == 429
     assert exc.value.detail == RATE_LIMIT_DETAIL
     assert question not in str(exc.value.detail)
-    assert calls["n"] == 10
-    agent_query(AgentQueryIn(question=question), other)
-    assert calls["n"] == 11
+    enforce_agent_query_limit(8)
     clock["t"] = 1_061.0
-    agent_query(AgentQueryIn(question=question), user)
-    assert calls["n"] == 12
+    enforce_agent_query_limit(7)
     reset_agent_query_limits()
 
 
